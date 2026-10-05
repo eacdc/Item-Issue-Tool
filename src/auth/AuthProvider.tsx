@@ -17,7 +17,7 @@ interface AuthContextValue {
   status: Status;
   session: SessionInfo | null;
   reloginRequired: boolean;
-  login: (email: string, password: string, site: Site) => Promise<void>;
+  login: (username: string, database: Site) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
@@ -52,8 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (getToken()) void refreshSession();
   }, [refreshSession]);
 
-  const login = useCallback(async (email: string, password: string, site: Site) => {
-    await api.login({ email, password, site });
+  const login = useCallback(async (username: string, database: Site) => {
+    await api.login({ username, database });
     const info = await api.session();
     setSession(info);
     setStatus('ready');

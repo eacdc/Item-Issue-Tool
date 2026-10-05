@@ -6,21 +6,21 @@
 export type Site = 'KOL' | 'AHM';
 export type IssueMode = 'ALLOCATED' | 'DIRECT';
 
+/** Same sign-in as the production entry tool: ERP username + database, no password. */
 export interface LoginRequest {
-  email: string;
-  password: string;
-  site: Site;
+  username: string;
+  database: Site;
 }
 
 export interface LoginResponse {
   token: string;
   expiresAt: string;
-  user: { id: string; email: string; displayName: string | null; roles: string[]; allowedSites: Site[] };
-  context: { site: Site; erpUserId: number | null };
+  user: { userId: number; userName: string | null };
+  site: Site;
 }
 
 export interface SessionInfo {
-  user: { email: string | null; displayName: string | null; roles: string[] };
+  user: { userId: number; userName: string | null };
   site: Site;
   companyId: number;
   erpUserId: number | null;

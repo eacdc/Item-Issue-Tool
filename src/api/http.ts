@@ -72,17 +72,14 @@ export class HttpApi implements IssueToolApi {
   }
 
   async login(request: LoginRequest): Promise<LoginResponse> {
-    const response = await this.request<LoginResponse>('POST', '/api/supplier-portal/auth/login', request, { auth: false });
+    const response = await this.request<LoginResponse>('POST', '/api/issue-tool/auth/login', request, { auth: false });
     setToken(response.token);
     return response;
   }
 
+  /** The session is a signed token; signing out just forgets it. */
   async logout(): Promise<void> {
-    try {
-      await this.request('POST', '/api/supplier-portal/auth/logout', {});
-    } finally {
-      setToken(null);
-    }
+    setToken(null);
   }
 
   session() {

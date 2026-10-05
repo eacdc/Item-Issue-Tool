@@ -4,7 +4,8 @@ Run it twice: once in mock mode (`VITE_API_BASE_URL=mock`), then against the rea
 
 Before you start:
 
-- [ ] Sign in. The header shows the plant and your name.
+- [ ] Sign in with your ERP username and database KOL. The header shows the plant and your ERP user name.
+- [ ] A username that does not exist is refused with “No active ERP user …”.
 - [ ] With writes off, the striped **DRY RUN** banner is visible on every tab.
 
 ## 1. Allocated issue split across two batches
@@ -38,7 +39,7 @@ Job content `J06482_26_27[1_1]`, planned R01312 at 68.84 Kg; the storekeeper iss
 - [ ] Select R01175, click batch `52873_…_1.00`. Quantity prefills **68.84**; the unit reads **Kg**.
 - [ ] Type `152`, press Enter. The running total turns amber: "Over by 83.16 Kg".
 - [ ] Leave Slip No. blank. Choose Floor-Panchla / Paper.
-- [ ] Mock only: Mock API → **Expire session**, then press Save. A sign-in dialog opens over the form. Sign in. The form is unchanged (line, slip, warehouse). Press Save again.
+- [ ] Mock only: Mock API → **Expire session**, then press Save. A sign-in dialog opens over the form, with your username filled in. Sign in. The form is unchanged (line, slip, warehouse). Press Save again.
 - [ ] Press Save, then Confirm. The dialog switches to **Check the warnings** and lists OVER JOB PENDING: "Total 152 Kg is more than the job's pending requirement of 68.84 Kg."
 - [ ] **Issue anyway** is disabled until the tick-box is ticked.
 - [ ] Tick, press **Issue anyway**. Writes on: a voucher number appears (mock: `IS17256_26_27`). Writes off: the dry-run result, no number. In its rows, the header has JobBookingID **0** and DeliveryNoteNo shows “(rolled back)”, because a blank slip takes the voucher number; the line has the job's JobBookingID and PicklistTransactionID, MachineID, DepartmentID, ProcessID all 0.
@@ -55,4 +56,4 @@ Job content `J06482_26_27[1_1]`, planned R01312 at 68.84 Kg; the storekeeper iss
 
 - [ ] `GET /session` reports `writesEnabled: false`: the banner shows, confirm reads "Confirm (dry run)".
 - [ ] Flows 1 and 2 above end in the dry-run result, and the would-be rows match the backend's acceptance test expectations.
-- [ ] A login without an ERP UserID sees the "not linked to an ERP user" notice and cannot press Save or Delete.
+- [ ] History shows your ERP user name as the creator of what you posted.

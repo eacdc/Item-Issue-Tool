@@ -21,7 +21,7 @@ cp .env.example .env.local    # VITE_API_BASE_URL=mock
 npm run dev                   # http://localhost:5173
 ```
 
-In mock mode any email and password sign in (the password `wrong` fails). The header has a **Mock API** menu to:
+Sign-in is the same as the production entry tool: your ERP **username** and the **database** (KOL or AHM), no password. In mock mode any username works (`nobody` fails). The header has a **Mock API** menu to:
 
 - turn writes on and off (off = every save is a dry run, as on the real server until writes are enabled);
 - make the next save's stock refresh fail;
@@ -36,7 +36,7 @@ The mock is seeded with the two issues the backend's acceptance tests use: pickl
 VITE_API_BASE_URL=http://localhost:3001     # or https://cdcapi.onrender.com
 ```
 
-Restart `npm run dev` after changing it: Vite reads env files at start-up. The backend must allow this origin (see its `CORS_ORIGINS` / `ISSUE_TOOL_CORS_ORIGIN`; with `CORS_ORIGINS` unset it allows every origin). You sign in with a Supplier Portal login that has the `STORE` role. Posting also needs an ERP UserID on that login.
+Restart `npm run dev` after changing it: Vite reads env files at start-up. The backend must allow this origin (see its `CORS_ORIGINS` / `ISSUE_TOOL_CORS_ORIGIN`; with `CORS_ORIGINS` unset it allows every origin). Sign in with your ERP username (as in `UserMaster`, the same one the production entry tool uses) and the database.
 
 ### Scripts
 

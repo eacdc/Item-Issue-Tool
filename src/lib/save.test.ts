@@ -19,7 +19,7 @@ Object.assign(globalThis, {
 async function signedInMock(writes: boolean) {
   const api = new MockApi();
   api.writesEnabled = writes;
-  await api.login({ email: 'store1@cdcprinters.com', password: 'x', site: 'KOL' });
+  await api.login({ username: 'store1', database: 'KOL' });
   return api;
 }
 

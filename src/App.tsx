@@ -77,7 +77,7 @@ function Header() {
       {!session.writesEnabled && <span className="badge badge-dry">DRY RUN</span>}
       <span className="spacer" />
       {mockApi && <MockControls />}
-      <span className="user">{session.user.displayName ?? session.user.email}</span>
+      <span className="user">{session.user.userName ?? `User ${session.user.userId}`}</span>
       <button type="button" className="btn btn-small" onClick={() => void logout()}>Sign out</button>
     </header>
   );

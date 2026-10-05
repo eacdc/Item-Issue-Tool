@@ -246,32 +246,37 @@ export class MockApi implements IssueToolApi {
 
   // ── auth ──
 
+  private userName = 'STORE1';
+  private site: 'KOL' | 'AHM' = 'KOL';
+
   async login(request: LoginRequest): Promise<LoginResponse> {
     await this.wait(400);
-    if (!request.email || !request.password || request.password === 'wrong') {
-      throw new ApiError(401, 'UNAUTHORIZED', 'Email or password is incorrect.');
+    const name = request.username.trim();
+    if (!name || name.toLowerCase() === 'nobody') {
+      throw new ApiError(401, 'UNKNOWN_USER', `No active ERP user "${name}" in ${request.database}.`);
     }
     const token = `mock-${Math.random().toString(16).slice(2)}`;
     setToken(token);
     this.sessionValid = true;
+    this.userName = name.toUpperCase();
+    this.site = request.database;
     return {
       token,
-      expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
-      user: { id: 'mock', email: request.email, displayName: request.email.split('@')[0] ?? request.email, roles: ['STORE'], allowedSites: ['KOL', 'AHM'] },
-      context: { site: request.site, erpUserId: 24 },
+      expiresAt: new Date(Date.now() + 12 * 3600000).toISOString(),
+      user: { userId: 24, userName: this.userName },
+      site: request.database,
     };
   }
 
   async logout(): Promise<void> {
-    await this.wait(100);
     setToken(null);
   }
 
   async session(): Promise<SessionInfo> {
     await this.guard();
     return {
-      user: { email: 'store1@cdcprinters.com', displayName: 'Store 1 (mock)', roles: ['STORE'] },
-      site: 'KOL',
+      user: { userId: 24, userName: `${this.userName} (mock)` },
+      site: this.site,
       companyId: 2,
       erpUserId: 24,
       canPost: true,
