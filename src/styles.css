@@ -113,6 +113,8 @@ input[type='checkbox'] { width: 22px; height: 22px; }
 
 .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; background: #e3ecf6; color: var(--primary); margin-left: 6px; font-weight: 600; font-family: system-ui, sans-serif; }
 .badge-sub { background: #f1e9fb; color: #5b2c8a; }
+.chip-muted { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; background: #eef1f5; color: var(--muted); white-space: nowrap; cursor: help; }
+.nowrap { white-space: nowrap; }
 .badge-dry { background: var(--dry-bg); color: var(--dry); border: 1px solid #e0b000; }
 
 /* ── tables ─────────────────────────────────────────────────────────────── */

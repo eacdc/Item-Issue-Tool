@@ -130,10 +130,10 @@ function HistoryRow({ issue, open, onToggle, onDelete, canPost }: { issue: Histo
               Delete
             </button>
           ) : (
-            <span className="muted small">Can't delete: {issue.deleteBlockedReason ?? 'consumed'}</span>
+            <span className="chip-muted" title={`Can't delete: ${issue.deleteBlockedReason ?? 'consumed'}`}>Consumed</span>
           )}
         </td>
-        <td>{formatDate(issue.voucherDate)}</td>
+        <td className="nowrap">{formatDate(issue.voucherDate)}</td>
         <td>{issue.mode === 'ALLOCATED' ? 'Picklist' : 'Direct'}</td>
         <td className="mono">{issue.jobContentNo}</td>
         <td>{issue.jobName}</td>
