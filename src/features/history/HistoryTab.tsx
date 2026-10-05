@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, errorMessage, type DeleteIssueResponse, type HistoryIssue } from '../../api';
 import { useSession } from '../../auth/AuthProvider';
 import { Modal } from '../../components/Modal';
@@ -15,6 +15,8 @@ export function HistoryTab() {
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<Set<number>>(new Set());
   const [deleting, setDeleting] = useState<HistoryIssue | null>(null);
+  const [search, setSearch] = useState('');
+  const shown = useMemo(() => filterIssues(rows ?? [], search), [rows, search]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,7 +48,16 @@ export function HistoryTab() {
         <label className="inline">From <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} /></label>
         <label className="inline">To <input type="date" value={to} max={session.today} onChange={(e) => setTo(e.target.value)} /></label>
         <button type="button" className="btn" onClick={() => void load()} disabled={loading}>{loading ? 'Loading…' : 'Refresh'}</button>
-        <span className="muted">{rows ? `${rows.length} issue(s)` : ''}</span>
+        <input
+          type="search"
+          className="search"
+          placeholder="Find an issue: voucher no., job, item, user…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <span className="muted">
+          {rows ? (search.trim() ? `${shown.length} of ${rows.length} issue(s)` : `${rows.length} issue(s)`) : ''}
+        </span>
       </div>
       {error && <p className="notice notice-error">{error}</p>}
 
@@ -56,6 +67,7 @@ export function HistoryTab() {
             <tr>
               <th aria-label="Expand" />
               <th>Voucher</th>
+              <th>Delete</th>
               <th>Date</th>
               <th>Type</th>
               <th>Job content</th>
@@ -64,11 +76,10 @@ export function HistoryTab() {
               <th>Slip No.</th>
               <th className="num">Total</th>
               <th>Created by</th>
-              <th aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
-            {rows?.map((r) => (
+            {shown.map((r) => (
               <HistoryRow
                 key={r.transactionId}
                 issue={r}
@@ -78,8 +89,8 @@ export function HistoryTab() {
                 canPost={session.canPost}
               />
             ))}
-            {rows && !rows.length && (
-              <tr><td colSpan={11} className="empty">No issues in this period.</td></tr>
+            {rows && !shown.length && (
+              <tr><td colSpan={11} className="empty">{rows.length ? 'No issue matches the search.' : 'No issues in this period.'}</td></tr>
             )}
           </tbody>
         </table>
@@ -113,6 +124,15 @@ function HistoryRow({ issue, open, onToggle, onDelete, canPost }: { issue: Histo
           {issue.voucherNo}
           {issue.createdByIssueTool && <span className="badge" title="Created by this tool">tool</span>}
         </td>
+        <td>
+          {issue.canDelete ? (
+            <button type="button" className="btn btn-small btn-danger" onClick={onDelete} disabled={!canPost}>
+              Delete
+            </button>
+          ) : (
+            <span className="muted small">Can't delete: {issue.deleteBlockedReason ?? 'consumed'}</span>
+          )}
+        </td>
         <td>{formatDate(issue.voucherDate)}</td>
         <td>{issue.mode === 'ALLOCATED' ? 'Picklist' : 'Direct'}</td>
         <td className="mono">{issue.jobContentNo}</td>
@@ -123,13 +143,6 @@ function HistoryRow({ issue, open, onToggle, onDelete, canPost }: { issue: Histo
         <td>
           {issue.createdBy.userName ?? issue.createdBy.userId}
           <div className="muted small">{formatDateTime(issue.createdDate)}</div>
-        </td>
-        <td className="actions">
-          {issue.canDelete ? (
-            <button type="button" className="btn btn-small btn-danger" onClick={onDelete} disabled={!canPost}>Delete</button>
-          ) : (
-            <span className="muted small" title={issue.deleteBlockedReason ?? ''}>Consumed</span>
-          )}
         </td>
       </tr>
       {open && (
@@ -245,4 +258,18 @@ function DeleteDialog({ issue, writesEnabled, onClose }: { issue: HistoryIssue; 
       )}
     </Modal>
   );
+}
+
+/** Pure: every word must appear in the voucher, job, department, slip, user or a line's item / batch / picklist. */
+export function filterIssues(rows: HistoryIssue[], search: string): HistoryIssue[] {
+  const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return rows;
+  return rows.filter((r) => {
+    const haystack = [
+      r.voucherNo, r.jobCardNo, r.jobContentNo, r.jobName, r.contentName, r.departmentName, r.slipNo,
+      r.createdBy.userName, String(r.createdBy.userId ?? ''),
+      ...r.lines.flatMap((l) => [l.item.itemCode, l.item.itemName, l.batchNo, l.picklistNo]),
+    ].filter(Boolean).join(' ').toLowerCase();
+    return words.every((w) => haystack.includes(w));
+  });
 }

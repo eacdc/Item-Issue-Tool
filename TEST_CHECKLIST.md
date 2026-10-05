@@ -49,8 +49,9 @@ Job content `J06482_26_27[1_1]`, planned R01312 at 68.84 Kg; the storekeeper iss
 
 - [ ] **History** lists today's issues with voucher, type, job content, department, slip, total with unit, and who created them. Issues saved by this tool carry a **tool** badge.
 - [ ] Expand an issue: its lines show item, batch, from-bin, floor bin, picklist and quantity with unit.
-- [ ] **Delete** asks for confirmation. Writes off: "Dry run … unchanged", and the issue stays listed. Writes on: "… is deleted" and it leaves the list; in mock mode the batch stock comes back.
-- [ ] An issue whose material has been consumed shows "Consumed" instead of Delete.
+- [ ] Type a voucher number (or item code, job, user) in **Find an issue**: only matching issues stay.
+- [ ] Each issue has a red **Delete** button next to its voucher number. **Delete** asks for confirmation. Writes off: "Dry run … unchanged", and the issue stays listed. Writes on: "… is deleted" and it leaves the list; in mock mode the batch stock comes back.
+- [ ] An issue whose material has been consumed shows "Can't delete: Material from this issue has been consumed." instead of Delete.
 
 ## 4. Against the real backend (dry run)
 
