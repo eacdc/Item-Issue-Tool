@@ -15,8 +15,8 @@ import { ApiError } from './errors';
 import { getToken, setToken } from '../auth/token';
 import type {
   Batch, ClosePicklistLineResponse, DeleteIssueResponse, Department, FloorWarehouse, HistoryIssue, HistoryLine, HistoryResponse, IssueToolApi,
-  IssueWarning, Item, ItemBatches, ItemSearchRow, JobContent, LoginRequest, LoginResponse, Page, PicklistLine,
-  PicklistQuery, PostIssueRequest, PostIssueResponse, RefreshStockResponse, SessionInfo,
+  IssueWarning, Item, ItemBatches, ItemSearchRow, JobContent, JobSearch, LoginRequest, LoginResponse, Page, PicklistLine,
+  PicklistQuery, PostIssueRequest, PostIssueResponse, RefreshStockResponse, SalesPerson, SessionInfo,
 } from './types';
 
 const WRITES_KEY = 'cdc-issue-tool.mock.writes';
@@ -74,6 +74,10 @@ interface MockContent {
   clientName: string;
   departmentId: number;
   planned: { itemId: number; required: number }[];
+  /** Mock job card fields for the job search filters. */
+  jobBookingDate?: string;
+  salesPersonId?: number;
+  status?: 'pending' | 'closed' | 'cancelled';
 }
 
 interface MockPicklistLine {
@@ -143,6 +147,7 @@ function seed() {
       jobContentId: contentId, jobBookingId: 17000 + i, jobCardNo: `J07${String(100 + i).padStart(3, '0')}_26_27`,
       jobContentNo: `J07${String(100 + i).padStart(3, '0')}_26_27[1_1]`, jobName: `${clients[i % 4]} CARTON ${i + 1}`,
       contentName: 'Carton', clientName: clients[i % 4]!, departmentId: 100, planned: [{ itemId: i % 2 ? 9410 : 9500, required: 500 + i * 10 }],
+      jobBookingDate: addDays('2026-10-06', -i), salesPersonId: i % 2 ? 501 : 502, status: i % 9 === 0 ? 'closed' : i % 13 === 0 ? 'cancelled' : 'pending',
     });
     picklist.push({
       picklistDetailId: 110000 + i, picklistTransactionId: 64400 + Math.floor(i / 3), picklistNo: `IPIC${String(3420 + Math.floor(i / 3)).padStart(5, '0')}_26_27`,
@@ -382,25 +387,44 @@ export class MockApi implements IssueToolApi {
     return { status: 'CLOSED', dryRun: false, picklistDetailId, picklistNo: line.picklistNo };
   }
 
-  async jobContents(search: string): Promise<{ rows: JobContent[] }> {
+  async jobContents(f: JobSearch): Promise<{ rows: JobContent[]; truncated?: boolean }> {
     await this.guard();
-    if (search.trim().length < 3) {
-      throw new ApiError(400, 'VALIDATION_FAILED', 'search: Type at least 3 characters of the job card number.');
+    const s = f.search.trim().toLowerCase();
+    if (s && s.length < 3) throw new ApiError(400, 'VALIDATION_FAILED', 'search: Type at least 3 characters of the job number.');
+    if (!s && !f.clientName.trim() && !f.salesPersonId && !f.fromDate && !f.toDate) {
+      throw new ApiError(400, 'VALIDATION_FAILED', 'search: Enter a job number, or choose a client, sales person or job date.');
     }
-    const s = search.trim().toLowerCase();
+    const client = f.clientName.trim().toLowerCase();
     const rows = this.data.contents
-      .filter((c) => c.jobCardNo.toLowerCase().includes(s) || c.jobContentNo.toLowerCase().includes(s))
-      .slice(0, 25)
+      .filter((c) => !s || c.jobCardNo.toLowerCase().includes(s) || c.jobContentNo.toLowerCase().includes(s))
+      .filter((c) => !client || c.clientName.toLowerCase().includes(client))
+      .filter((c) => !f.salesPersonId || (c.salesPersonId ?? 501) === f.salesPersonId)
+      .filter((c) => !f.fromDate || (c.jobBookingDate ?? '2026-10-01') >= f.fromDate)
+      .filter((c) => !f.toDate || (c.jobBookingDate ?? '2026-10-01') <= f.toDate)
+      .filter((c) => !f.jobStatus || (c.status ?? 'pending') === f.jobStatus)
+      .slice(0, 500)
       .map((c) => {
         const dept = this.data.departments.find((d) => d.departmentId === c.departmentId);
         return {
           jobContentId: c.jobContentId, jobBookingId: c.jobBookingId, jobCardNo: c.jobCardNo, jobContentNo: c.jobContentNo,
           jobName: c.jobName, contentName: c.contentName, clientName: c.clientName,
+          salesPersonName: (c.salesPersonId ?? 501) === 501 ? 'AMIT SHARMA' : 'PRIYA DAS',
+          jobBookingDate: c.jobBookingDate ?? '2026-10-01', releasedDate: c.jobBookingDate ?? '2026-10-01', jobStatus: c.status ?? 'pending',
           suggestedDepartmentId: dept?.departmentId ?? null, suggestedDepartmentName: dept?.departmentName ?? null,
           ...this.requirement(c),
         };
       });
     return { rows };
+  }
+
+  async clients(): Promise<{ clients: string[] }> {
+    await this.guard();
+    return { clients: [...new Set(this.data.contents.map((c) => c.clientName))].sort() };
+  }
+
+  async salesPersons(): Promise<{ salesPersons: SalesPerson[] }> {
+    await this.guard();
+    return { salesPersons: [{ ledgerId: 501, ledgerName: 'AMIT SHARMA' }, { ledgerId: 502, ledgerName: 'PRIYA DAS' }] };
   }
 
   async items(search: string, jobContentId?: number): Promise<{ rows: ItemSearchRow[] }> {

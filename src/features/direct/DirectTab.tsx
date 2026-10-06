@@ -4,6 +4,8 @@ import { useSession } from '../../auth/AuthProvider';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { IssueDetails, detailsProblems, type IssueDetailsValue } from '../../components/IssueDetails';
 import { LinesEditor } from '../../components/LinesEditor';
+import { JobSearch } from './JobSearch';
+import { plannedAsSearchRow } from '../../lib/jobRows';
 import { DataGrid, type Column } from '../../components/DataGrid';
 import { itemColumns, qtyColumn, textColumn } from '../../components/columns';
 import { IssueLinesTable, type LinesContext } from '../../components/IssueLinesTable';
@@ -50,10 +52,11 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
   const save = useIssueSave(buildRequest, prepare);
   const locked = save.busy || !!save.confirm;
 
-  function chooseContent(c: JobContent) {
+  function chooseContent(c: JobContent, paper: PlannedItem | null) {
     setContent(c);
     setDepartmentId(c.suggestedDepartmentId);
-    setItem(null);
+    // The row picked was a content and its paper: start with that paper selected.
+    setItem(paper ? plannedAsSearchRow(c, paper) : null);
   }
 
   function changeContent() {
@@ -88,7 +91,7 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
       </div>
 
       {!content ? (
-        <JobContentSearch onSelect={chooseContent} />
+        <JobSearch onSelect={chooseContent} />
       ) : (
         <>
           <ContentSummary content={content} onChange={changeContent} disabled={locked} />
@@ -143,16 +146,6 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
   );
 }
 
-const contentColumns: Column<JobContent>[] = [
-  textColumn('contentNo', 'Content No.', (c) => c.jobContentNo, { className: 'mono' }),
-  textColumn('jobName', 'Job Name', (c) => c.jobName),
-  textColumn('contentName', 'Content Name', (c) => c.contentName),
-  textColumn('client', 'Client', (c) => c.clientName),
-  textColumn('planned', 'Planned Items', (c) => c.plannedItems.map((p) => p.itemCode).join(', '), {
-    render: (c) => c.plannedItems.map((p) => p.itemCode).join(', ') || <span className="muted">none</span>,
-  }),
-];
-
 const plannedColumns: Column<PlannedItem>[] = [
   ...itemColumns<PlannedItem>((p) => p, ['code', 'name', 'group', 'quality', 'gsm', 'sizeW', 'sizeL', 'manufacturer', 'unit']),
   qtyColumn<PlannedItem>('required', 'Required Qty', (p) => p.required, (p) => p),
@@ -168,58 +161,6 @@ const itemPickerColumns: Column<ItemSearchRow>[] = [
   qtyColumn<ItemSearchRow>('physical', 'Physical Stock', (r) => r.physicalStock, (r) => r),
   qtyColumn<ItemSearchRow>('jobPending', 'Job Pending', (r) => r.pendingForJob ?? 0, (r) => r),
 ];
-
-function JobContentSearch({ onSelect }: { onSelect: (c: JobContent) => void }) {
-  const [search, setSearch] = useState('');
-  const debounced = useDebounced(search.trim());
-  const [rows, setRows] = useState<JobContent[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (debounced.length < 3) {
-      setRows(null);
-      return;
-    }
-    let alive = true;
-    setLoading(true);
-    api.jobContents(debounced).then(
-      (r) => alive && (setRows(r.rows), setError(null), setLoading(false)),
-      (err) => alive && (setError(errorMessage(err)), setLoading(false)),
-    );
-    return () => {
-      alive = false;
-    };
-  }, [debounced]);
-
-  return (
-    <section className="panel">
-      <h3>Job content</h3>
-      <div className="toolbar">
-        <input
-          type="search"
-          className="search"
-          placeholder="Job card number, e.g. J06482"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          autoFocus
-        />
-        <span className="muted">{loading ? 'Searching…' : debounced.length < 3 ? 'Type at least 3 characters' : rows ? `${rows.length} found` : ''}</span>
-      </div>
-      {error && <p className="notice notice-error">{error}</p>}
-      {rows && (
-        <DataGrid
-          rows={rows}
-          columns={contentColumns}
-          rowKey={(c) => c.jobContentId}
-          onRowClick={onSelect}
-          noun="job content"
-          emptyText="No job content matches."
-        />
-      )}
-    </section>
-  );
-}
 
 function ContentSummary({ content, onChange, disabled }: { content: JobContent; onChange: () => void; disabled: boolean }) {
   return (

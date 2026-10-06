@@ -47,6 +47,14 @@ Job content `J06482_26_27[1_1]`, planned R01312 at 68.84 Kg; the storekeeper iss
 - [ ] Tick, press **Issue anyway**. Writes on: a voucher number appears (mock: `IS17256_26_27`). Writes off: the dry-run result, no number. In its rows, the header has JobBookingID **0** and DeliveryNoteNo shows “(rolled back)”, because a blank slip takes the voucher number; the line has the job's JobBookingID and PicklistTransactionID, MachineID, DepartmentID, ProcessID all 0.
 - [ ] Mock only: Mock API → **Fail the stock refresh on the next save**, make another small direct issue. The result says the issue is saved but the stock summary was not updated, and **Retry stock refresh** succeeds.
 
+## 2a. Finding a job (Direct issue)
+
+- [ ] Press **Search** with no filter: "Enter a job number, or choose a client, sales person or job date."
+- [ ] Choose **Sales Person** and **Job Date: Last 30 days**, Search: rows list newest job first with Released Date, Booking No, Job Card No, Job Name, Content Name, Item Code, Required / Issued / Pending Sheets, Kg and Running Meter, and Job Status.
+- [ ] **Job Status** narrows to Pending / Closed / Cancelled; **Custom range…** shows From / To dates; **Client Name** suggests clients as you type.
+- [ ] A row whose paper has already been issued is green.
+- [ ] Click a row: the content opens with its paper already selected and its batches loaded. **Change job** returns to the same search and results.
+
 ## 3. Closing a picklist line
 
 - [ ] On the list, press **Close** on any line. The dialog shows allocated, issued and what stays pending. Writes off: **Close (dry run)** → "tested and rolled back", the line stays. Writes on: **Close line** → the line leaves the list.

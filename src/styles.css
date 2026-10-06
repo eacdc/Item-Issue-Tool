@@ -345,3 +345,15 @@ table.erp-grid .badge, table.erp-grid .chip-muted { font-size: 10px; padding: 0 
 /* Toolbars above the grids: a little lower than form fields. */
 .toolbar input[type='search'], .toolbar input[type='date'], .toolbar .btn { min-height: 32px; }
 .app-header .btn { min-height: 30px; }
+
+/* ── direct tab: job search with the Job Card Generator's filters ───────── */
+.job-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 12px; align-items: end; margin-bottom: 8px; }
+.job-filters label { font-size: 12px; font-weight: 600; }
+.job-filters input, .job-filters select { min-height: 32px; font-size: 13px; }
+.job-filter-buttons { display: flex; gap: 8px; }
+.job-filter-buttons .btn { min-height: 32px; }
+/* A content whose paper has already been issued, as the ERP colours it. */
+table.erp-grid tr.row-started { background: #c9f7d9; }
+table.erp-grid tr.row-started:hover { background: #b2f0c7; }
+:root[data-theme='dark'] table.erp-grid tr.row-started { background: #14412a; }
+:root[data-theme='dark'] table.erp-grid tr.row-started:hover { background: #1a5236; }

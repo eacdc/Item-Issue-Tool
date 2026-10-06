@@ -112,10 +112,33 @@ export interface JobContent {
   jobName: string | null;
   contentName: string | null;
   clientName: string | null;
+  salesPersonName?: string | null;
+  jobBookingDate?: string | null;
+  /** When the content was released, YYYY-MM-DD. */
+  releasedDate?: string | null;
+  /** As the Job Card Generator works it out. */
+  jobStatus?: JobStatus;
   suggestedDepartmentId: number | null;
   suggestedDepartmentName: string | null;
   plannedItems: PlannedItem[];
   requirementGroups: RequirementGroup[];
+}
+
+export type JobStatus = 'pending' | 'closed' | 'cancelled';
+
+/** The Job Card Generator's filters. At least one of job number, client, sales person or a date is needed. */
+export interface JobSearch {
+  search: string;
+  clientName: string;
+  salesPersonId: number | null;
+  fromDate: string | null;
+  toDate: string | null;
+  jobStatus: JobStatus | null;
+}
+
+export interface SalesPerson {
+  ledgerId: number;
+  ledgerName: string | null;
 }
 
 export interface ItemSearchRow extends Item {
@@ -336,7 +359,9 @@ export interface IssueToolApi {
   session(): Promise<SessionInfo>;
   picklists(query: PicklistQuery): Promise<Page<PicklistLine>>;
   closePicklistLine(picklistDetailId: number): Promise<ClosePicklistLineResponse>;
-  jobContents(search: string): Promise<{ rows: JobContent[] }>;
+  jobContents(filters: JobSearch): Promise<{ rows: JobContent[]; truncated?: boolean }>;
+  clients(): Promise<{ clients: string[] }>;
+  salesPersons(): Promise<{ salesPersons: SalesPerson[] }>;
   items(search: string, jobContentId?: number): Promise<{ rows: ItemSearchRow[] }>;
   batches(itemId: number): Promise<ItemBatches>;
   floorWarehouses(): Promise<{ warehouses: FloorWarehouse[] }>;

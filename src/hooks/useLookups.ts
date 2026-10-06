@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, errorMessage, type Department, type FloorWarehouse } from '../api';
+import { api, errorMessage, type Department, type FloorWarehouse, type SalesPerson } from '../api';
 
 /** Lookups change rarely; load each once per page load, and retry after a failure. */
 let warehousesPromise: Promise<FloorWarehouse[]> | null = null;
@@ -35,3 +35,17 @@ const resetDepartments = () => {
 
 export const useFloorWarehouses = () => useCached(getWarehouses, resetWarehouses);
 export const useDepartments = () => useCached(getDepartments, resetDepartments);
+
+let clientsPromise: Promise<string[]> | null = null;
+let salesPersonsPromise: Promise<SalesPerson[]> | null = null;
+const getClients = () => (clientsPromise ??= api.clients().then((r) => r.clients));
+const resetClients = () => {
+  clientsPromise = null;
+};
+const getSalesPersons = () => (salesPersonsPromise ??= api.salesPersons().then((r) => r.salesPersons));
+const resetSalesPersons = () => {
+  salesPersonsPromise = null;
+};
+
+export const useClients = () => useCached(getClients, resetClients);
+export const useSalesPersons = () => useCached(getSalesPersons, resetSalesPersons);

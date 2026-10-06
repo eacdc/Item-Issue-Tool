@@ -6,8 +6,8 @@ import { ApiError } from './errors';
 import { getToken, setToken } from '../auth/token';
 import type {
   ClosePicklistLineResponse, DeleteIssueResponse, Department, FloorWarehouse, HistoryResponse, IssueToolApi, ItemBatches, ItemSearchRow,
-  JobContent, LoginRequest, LoginResponse, Page, PicklistLine, PicklistQuery, PostIssueRequest, PostIssueResponse,
-  RefreshStockResponse, SessionInfo,
+  JobContent, JobSearch, LoginRequest, LoginResponse, Page, PicklistLine, PicklistQuery, PostIssueRequest, PostIssueResponse,
+  RefreshStockResponse, SalesPerson, SessionInfo,
 } from './types';
 
 type UnauthorizedListener = () => void;
@@ -101,8 +101,23 @@ export class HttpApi implements IssueToolApi {
     return this.tool<ClosePicklistLineResponse>('POST', `/picklists/${picklistDetailId}/close`);
   }
 
-  jobContents(search: string) {
-    return this.tool<{ rows: JobContent[] }>('GET', `/job-contents?${new URLSearchParams({ search })}`);
+  jobContents(f: JobSearch) {
+    const params = new URLSearchParams();
+    if (f.search.trim()) params.set('search', f.search.trim());
+    if (f.clientName.trim()) params.set('clientName', f.clientName.trim());
+    if (f.salesPersonId) params.set('salesPersonId', String(f.salesPersonId));
+    if (f.fromDate) params.set('fromDate', f.fromDate);
+    if (f.toDate) params.set('toDate', f.toDate);
+    if (f.jobStatus) params.set('jobStatus', f.jobStatus);
+    return this.tool<{ rows: JobContent[]; truncated?: boolean }>('GET', `/job-contents?${params}`);
+  }
+
+  clients() {
+    return this.tool<{ clients: string[] }>('GET', '/lookups/clients');
+  }
+
+  salesPersons() {
+    return this.tool<{ salesPersons: SalesPerson[] }>('GET', '/lookups/sales-persons');
   }
 
   items(search: string, jobContentId?: number) {
