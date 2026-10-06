@@ -58,14 +58,15 @@ Job content `J06482_26_27[1_1]`, planned R01312 at 68.84 Kg; the storekeeper iss
 
 ## 5. Grids, filters and totals
 
-- [ ] In every table, each column has a filter under its header. Text columns: type part of a value. Number columns: try `>1000`, `<=5`, `100-200`. Date columns: on / from / until a date. **Clear filters** above the grid removes them.
+- [ ] In every table, each column has a filter under its header. Text columns: type part of a value. Number columns: try `>1000`, `<=5`, `100-200`. Date columns: click the 📅 box, choose on / from / until and a date. **Clear filters** above the grid removes them.
 - [ ] Click a header to sort; click again for descending, a third time to stop sorting.
-- [ ] The totals row shows the row count and, under each quantity column, Kg (sheets weighed in, marked *, hover for how many sheets), then Nos, then other units. Mock History: 1,551.218 Kg*, 6 Nos (NOS + Nos merged), 8 Roll.
+- [ ] The totals row shows the row count and, under each quantity column, one figure in **Kg** (sheets weighed in). Hover the * to see how many sheets went in and what was left out (Nos, Roll, Ltr…).
+- [ ] On a 1920×1080 screen, 30 rows, the header and the pager fit without any scrolling, and nothing scrolls sideways. Choose 100 rows and scroll: the header and filters stay at the top.
 - [ ] Filter a column: the count reads "n lines of N" and the totals follow the filter.
 
 ## 6. History and delete
 
-- [ ] **History** shows the last 7 days as the ERP's issue register: one row per line, Item Group to Remark, plus Slip No., Type, Batch No and Floor Bin. Issues saved by this tool carry a **tool** badge. Page sizes 50 / 125 / 500 / 1000.
+- [ ] **History** shows the last 7 days as the ERP's issue register: one row per line, Item Group to Remark, plus Slip No., Type, Batch No and Floor Bin. Issues saved by this tool carry a **tool** badge. Page sizes 30 / 100 / 500 / 1000.
 - [ ] Type a voucher number (or item code, job, user) in **Find an issue**: only matching issues stay.
 - [ ] Each issue has a red **Delete** button next to its voucher number. **Delete** asks for confirmation. Writes off: "Dry run … unchanged", and the issue stays listed. Writes on: "… is deleted" and it leaves the list; in mock mode the batch stock comes back.
 - [ ] An issue whose material has been consumed shows a grey "Consumed" chip instead of Delete (hover it for the reason).

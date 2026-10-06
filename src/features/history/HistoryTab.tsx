@@ -6,7 +6,7 @@ import { DataGrid, type Column } from '../../components/DataGrid';
 import { dateColumn, itemColumns, qtyColumn, textColumn } from '../../components/columns';
 import { addDays, formatDate, formatDateTime } from '../../lib/format';
 
-const PAGE_SIZES = [50, 125, 500, 1000];
+const PAGE_SIZES = [30, 100, 500, 1000];
 
 /** One row of the issue register: an issue line with its voucher. */
 export interface RegisterRow {
@@ -66,9 +66,9 @@ export function HistoryTab() {
 
   const columns = useMemo<Column<RegisterRow>[]>(() => [
     ...itemColumns<RegisterRow>((r) => r.line.item, ['group']),
-    textColumn<RegisterRow>('subGroup', 'Sub Group', (r) => r.line.itemSubGroupName, { className: 'clip-sm' }),
+    textColumn<RegisterRow>('subGroup', 'Sub Group', (r) => r.line.itemSubGroupName, { width: 6 }),
     textColumn<RegisterRow>('issueNo', 'Issue No.', (r) => r.issue.voucherNo, {
-      className: 'mono nowrap',
+      className: 'mono', width: 9.5,
       render: (r) => (
         <>
           {r.issue.voucherNo}
@@ -77,7 +77,7 @@ export function HistoryTab() {
       ),
     }),
     {
-      id: 'delete', header: 'Delete', type: 'text', value: () => null, filterable: false,
+      id: 'delete', header: 'Delete', type: 'text', value: () => null, filterable: false, width: 5.8,
       render: (r) =>
         r.issue.canDelete ? (
           <button type="button" className="btn btn-small btn-danger" onClick={() => setDeleting(r.issue)} disabled={!session.canPost} title={`Delete ${r.issue.voucherNo} (every line)`}>
@@ -89,23 +89,21 @@ export function HistoryTab() {
     },
     dateColumn<RegisterRow>('issueDate', 'Issue Date', (r) => r.issue.voucherDate),
     ...itemColumns<RegisterRow>((r) => r.line.item, ['code', 'name']),
-    textColumn<RegisterRow>('picklistNo', 'Picklist No.', (r) => r.picklistNo, { className: 'mono nowrap' }),
-    textColumn<RegisterRow>('department', 'Department', (r) => r.issue.departmentName),
-    textColumn<RegisterRow>('jcNo', 'J.C. No.', (r) => r.line.jobContentNo ?? r.issue.jobContentNo, { className: 'mono nowrap' }),
-    textColumn<RegisterRow>('jobName', 'Job Name', (r) => r.line.jobName ?? r.issue.jobName, { className: 'clip' }),
-    textColumn<RegisterRow>('contentName', 'Content Name', (r) => r.line.contentName ?? r.issue.contentName, { className: 'clip' }),
-    textColumn<RegisterRow>('machine', 'Machine Name', (r) => r.line.machineName),
-    qtyColumn<RegisterRow>('issueQty', 'Issue Qty', (r) => r.line.issueQuantity, (r) => ({ ...r.line.item, stockUnit: r.line.stockUnit })),
-    textColumn<RegisterRow>('stockUnit', 'Stock Unit', (r) => r.line.stockUnit),
-    textColumn<RegisterRow>('client', 'Client Name', (r) => r.line.clientName ?? r.issue.clientName, { className: 'clip' }),
+    textColumn<RegisterRow>('picklistNo', 'Picklist No.', (r) => r.picklistNo, { className: 'mono', width: 8 }),
+    textColumn<RegisterRow>('department', 'Department', (r) => r.issue.departmentName, { width: 6.8 }),
+    textColumn<RegisterRow>('jcNo', 'J.C. No.', (r) => r.line.jobContentNo ?? r.issue.jobContentNo, { className: 'mono', width: 8.5 }),
+    textColumn<RegisterRow>('jobName', 'Job Name', (r) => r.line.jobName ?? r.issue.jobName, { width: 10 }),
+    textColumn<RegisterRow>('contentName', 'Content Name', (r) => r.line.contentName ?? r.issue.contentName, { width: 8 }),
+    textColumn<RegisterRow>('machine', 'Machine Name', (r) => r.line.machineName, { width: 6 }),
+    qtyColumn<RegisterRow>('issueQty', 'Issue Qty', (r) => r.line.issueQuantity, (r) => ({ ...r.line.item, stockUnit: r.line.stockUnit }), { width: 6.5 }),
+    textColumn<RegisterRow>('stockUnit', 'Stock Unit', (r) => r.line.stockUnit, { width: 3.8 }),
+    textColumn<RegisterRow>('client', 'Client Name', (r) => r.line.clientName ?? r.issue.clientName, { width: 9 }),
     textColumn<RegisterRow>('createdBy', 'Created By', (r) => r.issue.createdBy.userName ?? String(r.issue.createdBy.userId ?? ''), {
       render: (r) => <span title={formatDateTime(r.issue.createdDate)}>{r.issue.createdBy.userName ?? r.issue.createdBy.userId}</span>,
     }),
-    textColumn<RegisterRow>('remark', 'Remark', (r) => r.issue.remark, { className: 'clip' }),
-    textColumn<RegisterRow>('slipNo', 'Slip No.', (r) => r.issue.slipNo, { className: 'mono nowrap' }),
-    textColumn<RegisterRow>('type', 'Type', (r) => (r.issue.mode === 'ALLOCATED' ? 'Picklist' : 'Direct')),
-    textColumn<RegisterRow>('batchNo', 'Batch No', (r) => r.line.batchNo, { className: 'mono nowrap' }),
-    textColumn<RegisterRow>('floor', 'Floor Bin', (r) => [r.line.floorWarehouseName, r.line.floorBinName].filter(Boolean).join(' / ')),
+    textColumn<RegisterRow>('remark', 'Remark', (r) => r.issue.remark, { width: 6 }),
+    textColumn<RegisterRow>('slipNo', 'Slip No.', (r) => r.issue.slipNo, { className: 'mono', width: 8 }),
+    textColumn<RegisterRow>('batchNo', 'Batch No', (r) => r.line.batchNo, { className: 'mono', width: 8.5 }),
   ], [session.canPost]);
 
   return (

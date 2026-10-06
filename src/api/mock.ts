@@ -193,6 +193,11 @@ function sampleHistory(): HistoryIssue[] {
   const ink = it({ itemId: 7911, itemCode: 'V00011', itemName: 'Spot, SONAKOTE GREEN 900 GRM', itemGroupId: 9, itemGroupName: 'VARNISHES & COATINGS', stockUnit: 'NOS' });
   const strap = it({ itemId: 7184, itemCode: 'RM00184', itemName: 'AUTOMATIC STRAPING ROLL', itemGroupId: 11, itemGroupName: 'OTHER MATERIAL', stockUnit: 'Roll' });
   const tape = it({ itemId: 7188, itemCode: 'RM00188', itemName: 'BROWN TAPE 3 INCH X 650 MTR', itemGroupId: 11, itemGroupName: 'OTHER MATERIAL', stockUnit: 'Nos' });
+  // Filler so History pages: 40 more ERP issues over the last week.
+  const filler = Array.from({ length: 40 }, (_, k) =>
+    issue(10 + k, addDays(today, -1 - (k % 6)), 'PRINTING',
+      [`J07${300 + k}_26_27[1_1]`, `Job number ${k + 1} with a fairly long name`, k % 2 ? 'Carton' : 'Leaflet', k % 3 ? 'Udyogi Plastics Pvt Ltd' : 'Berger Paints India Ltd'],
+      k % 2 ? 'Bikram' : 'Biplab', [[k % 3 ? fbb : art, 100 + k * 37, null, null]]));
   return [
     issue(9, today, 'PRINTING', ['J07385_26_27[1_1]', 'Specialty Reminder Card', 'Card', 'Eskag Pharma Pvt Ltd'], 'Bikram', [[fbb, 1, null, null]]),
     issue(8, today, 'PRINTING', ['J07470_26_27[1_2]', 'Folder with Greeting Card', 'Insert 3 kinds Card', 'Eden Realty Ventures'], 'Bikram', [[fbb, 1144, null, null]]),
@@ -201,6 +206,7 @@ function sampleHistory(): HistoryIssue[] {
     issue(5, addDays(today, -1), 'PACKING', null, 'Saugatap', [
       [varnish, 4, 'VARNISHES & COATINGS', null], [ink, 4, 'VARNISHES & COATINGS', null], [strap, 8, 'Packing Materials', null], [tape, 2, 'Packing Materials', null],
     ]),
+    ...filler,
   ];
 }
 

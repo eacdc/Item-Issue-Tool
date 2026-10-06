@@ -43,16 +43,16 @@ type ItemField = 'group' | 'code' | 'name' | 'quality' | 'gsm' | 'sizeW' | 'size
 /** The item master columns the ERP grids repeat, in the order asked for. */
 export function itemColumns<T>(item: (row: T) => Partial<Item>, fields: ItemField[], labels: Partial<Record<ItemField, string>> = {}): Column<T>[] {
   const defs: Record<ItemField, Column<T>> = {
-    group: textColumn('itemGroup', labels.group ?? 'Item Group', (r) => item(r).itemGroupName, { className: 'clip-sm' }),
-    code: textColumn('itemCode', labels.code ?? 'Item Code', (r) => item(r).itemCode, { className: 'mono' }),
-    name: textColumn('itemName', labels.name ?? 'Item Name', (r) => item(r).itemName, { className: 'clip-wide' }),
-    quality: textColumn('quality', labels.quality ?? 'Quality', (r) => item(r).quality),
-    gsm: numberColumn('gsm', labels.gsm ?? 'GSM', (r) => item(r).gsm),
-    sizeW: numberColumn('sizeW', labels.sizeW ?? 'SizeW', (r) => item(r).sizeW),
-    sizeL: numberColumn('sizeL', labels.sizeL ?? 'SizeL', (r) => item(r).sizeL),
-    manufacturer: textColumn('manufacturer', labels.manufacturer ?? 'Manufacturer', (r) => item(r).manufacturer),
-    certification: textColumn('certification', labels.certification ?? 'Certification', (r) => item(r).certification),
-    unit: textColumn('stockUnit', labels.unit ?? 'Stock Unit', (r) => item(r).stockUnit),
+    group: textColumn('itemGroup', labels.group ?? 'Item Group', (r) => item(r).itemGroupName, { width: 6 }),
+    code: textColumn('itemCode', labels.code ?? 'Item Code', (r) => item(r).itemCode, { className: 'mono', width: 5.5 }),
+    name: textColumn('itemName', labels.name ?? 'Item Name', (r) => item(r).itemName, { width: 12 }),
+    quality: textColumn('quality', labels.quality ?? 'Quality', (r) => item(r).quality, { width: 5 }),
+    gsm: numberColumn('gsm', labels.gsm ?? 'GSM', (r) => item(r).gsm, { width: 3.2 }),
+    sizeW: numberColumn('sizeW', labels.sizeW ?? 'SizeW', (r) => item(r).sizeW, { width: 3.5 }),
+    sizeL: numberColumn('sizeL', labels.sizeL ?? 'SizeL', (r) => item(r).sizeL, { width: 3.5 }),
+    manufacturer: textColumn('manufacturer', labels.manufacturer ?? 'Manufacturer', (r) => item(r).manufacturer, { width: 6.8 }),
+    certification: textColumn('certification', labels.certification ?? 'Certification', (r) => item(r).certification, { width: 5.8 }),
+    unit: textColumn('stockUnit', labels.unit ?? 'Stock Unit', (r) => item(r).stockUnit, { width: 3.8 }),
   };
   return fields.map((f) => defs[f]);
 }

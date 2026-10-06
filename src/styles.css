@@ -36,10 +36,10 @@
   --shadow: rgba(0, 0, 0, 0.15);
   color-scheme: light;
   --radius: 6px;
-  --tap: 44px;
+  --tap: 36px;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 15px;
-  line-height: 1.4;
+  font-size: 14px;
+  line-height: 1.35;
   color: var(--text);
   background: var(--bg);
 }
@@ -98,35 +98,35 @@ p { margin: 6px 0; }
 [hidden] { display: none !important; }
 
 /* ── layout ─────────────────────────────────────────────────────────────── */
-.app { max-width: 2200px; margin: 0 auto; padding: 0 16px 40px; }
-main { margin-top: 12px; }
+.app { max-width: 2200px; margin: 0 auto; padding: 0 12px 24px; }
+main { margin-top: 8px; }
 .app-header {
-  display: flex; align-items: center; gap: 12px; padding: 10px 0; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 12px; padding: 5px 0; flex-wrap: wrap;
   border-bottom: 1px solid var(--line);
 }
-.brand { font-weight: 700; font-size: 18px; color: var(--primary); }
+.brand { font-weight: 700; font-size: 17px; color: var(--primary); }
 .site { color: var(--muted); }
 .spacer { flex: 1; }
 .user { color: var(--muted); }
 
 .dry-run-banner {
-  margin-top: 10px; padding: 10px 14px; border-radius: var(--radius);
+  margin-top: 6px; padding: 5px 12px; border-radius: var(--radius);
   background: repeating-linear-gradient(-45deg, var(--dry-bg), var(--dry-bg) 14px, #ffd43b 14px, #ffd43b 28px);
-  color: var(--dry); font-size: 15px; border: 2px solid #e0b000;
+  color: var(--dry); font-size: 13px; border: 2px solid #e0b000;
 }
-.banner { margin-top: 10px; }
+.banner { margin-top: 6px; }
 
-.tabs { display: flex; gap: 4px; margin-top: 12px; border-bottom: 2px solid var(--line); }
+.tabs { display: flex; gap: 4px; margin-top: 6px; border-bottom: 2px solid var(--line); }
 .tab {
-  min-height: var(--tap); padding: 0 20px; border: 0; background: transparent; font-size: 16px; cursor: pointer;
+  min-height: 34px; padding: 0 18px; border: 0; background: transparent; font-size: 15px; cursor: pointer;
   color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px;
 }
 .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
 
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; margin-bottom: 10px; }
 .panel-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .panel-title h3 { margin: 0; }
-.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
 .form-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 
 /* ── controls ───────────────────────────────────────────────────────────── */
@@ -137,8 +137,8 @@ input[type='text'], input[type='search'], input[type='email'], input[type='passw
 input:focus, select:focus, button:focus-visible, tr:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
 .search { flex: 1; min-width: 260px; max-width: 560px; }
 label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-label > input, label > select { color: var(--text); font-size: 15px; }
-label.check, label.inline, label.ack { flex-direction: row; align-items: center; gap: 8px; font-size: 15px; color: var(--text); }
+label > input, label > select { color: var(--text); font-size: 14px; }
+label.check, label.inline, label.ack { flex-direction: row; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
 label.inline input { width: auto; }
 input[type='checkbox'] { width: 22px; height: 22px; }
 
@@ -188,7 +188,7 @@ table.dense th, table.dense td { padding: 7px 8px; border-bottom: 1px solid var(
 table.dense th { background: var(--th-bg); font-weight: 600; font-size: 13px; color: var(--th-text); position: sticky; top: 0; white-space: nowrap; }
 table.dense td.num, table.dense th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 table.clickable tbody tr { cursor: pointer; }
-table.clickable tbody tr td { height: var(--tap); }
+table.dense.clickable tbody tr td { height: var(--tap); }
 table.clickable tbody tr:hover { background: var(--hover); }
 table.dense tr.selected { background: var(--selected); box-shadow: inset 4px 0 0 var(--primary); }
 table.dense td.actions { text-align: right; white-space: nowrap; }
@@ -196,14 +196,6 @@ table.dense td.empty { text-align: center; color: var(--muted); padding: 20px; }
 table.dense .total-row td { border-top: 2px solid var(--text); font-weight: 600; }
 table.inner { background: var(--subtle); }
 tr.detail-row > td { background: var(--subtle); }
-table.erp-grid th { background: var(--grid-head-bg); color: var(--grid-head-text); font-size: 12px; white-space: normal; line-height: 1.15; padding: 6px; }
-table.erp-grid td { font-size: 13px; padding: 5px 6px; }
-table.erp-grid td.clip { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Issue / Close stay in view when the grid scrolls sideways. */
-table.erp-grid .sticky-right { position: sticky; right: 0; z-index: 1; box-shadow: -6px 0 6px -6px var(--shadow); }
-table.erp-grid td.sticky-right { background: var(--panel); }
-table.erp-grid tr:hover td.sticky-right { background: var(--hover); }
-table.erp-grid th.sticky-right { z-index: 2; }
 .rows-dump td { font-size: 12px; }
 
 .pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 10px; }
@@ -299,26 +291,57 @@ ul.notice { padding-left: 28px; }
 :root[data-theme='dark'] .btn-warn { color: #1b1300; }
 :root[data-theme='dark'] .modal-backdrop { background: rgba(0, 0, 0, 0.7); }
 
-/* ── data grid ──────────────────────────────────────────────────────────── */
+.btn.link { text-decoration: underline; color: var(--primary); min-height: 0; padding: 0 4px; }
+
+
+/* ── data grid: always fits the window, compact rows, header stays on top ── */
+.data-grid { margin-bottom: 4px; }
+table.erp-grid { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 11.5px; line-height: 16px; }
+table.erp-grid thead { position: sticky; top: 0; z-index: 3; }
+table.erp-grid th {
+  background: var(--grid-head-bg); color: var(--grid-head-text); font-size: 11px; font-weight: 600; text-align: left;
+  padding: 3px 4px; line-height: 13px; vertical-align: middle; overflow: hidden; overflow-wrap: break-word;
+}
+table.erp-grid th.num { text-align: right; }
 table.erp-grid th.sortable { cursor: pointer; user-select: none; }
 table.erp-grid th.sortable:hover { filter: brightness(1.15); }
-.sort-mark { font-size: 10px; }
-table.erp-grid tr.filter-row th { background: var(--panel); padding: 3px 4px; position: static; border-bottom: 1px solid var(--line); }
-table.erp-grid tr.filter-row th.sticky-right { position: sticky; }
-.filter-input, table.erp-grid tr.filter-row select {
-  min-height: 28px !important; padding: 2px 6px !important; font-size: 12px !important; width: 100%; min-width: 56px;
-  border: 1px solid var(--input-border); border-radius: 4px; background: var(--input-bg); color: var(--text);
+.sort-mark { font-size: 9px; }
+table.erp-grid tr.filter-row th { background: var(--panel); color: var(--text); padding: 2px; border-bottom: 1px solid var(--line); overflow: visible; }
+table.erp-grid td {
+  padding: 0 4px; height: 19px; border-bottom: 1px solid var(--line); vertical-align: middle;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.filter-pair { display: flex; gap: 2px; }
-.filter-pair select { width: auto !important; min-width: 38px !important; flex: none; padding: 2px !important; }
-.filter-pair[data-type='date'] select { min-width: 54px !important; }
-.filter-pair input[type='date'] { min-width: 118px; }
-.filter-note { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+table.erp-grid td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.erp-grid td.mono, table.erp-grid .mono { font-size: 11px; }
+table.erp-grid td.empty { text-align: center; color: var(--muted); padding: 14px; white-space: normal; }
+table.erp-grid.clickable tbody tr { cursor: pointer; }
+table.erp-grid tbody tr:hover { background: var(--hover); }
+table.erp-grid tr.selected { background: var(--selected); box-shadow: inset 3px 0 0 var(--primary); }
+table.erp-grid td.actions { text-align: right; }
+table.erp-grid tfoot td { background: var(--th-bg); font-size: 11px; border-top: 2px solid var(--grid-head-bg); border-bottom: 0; height: 19px; overflow: visible; }
+/* Buttons and chips inside a row keep it 20px high. */
+table.erp-grid .btn { min-height: 17px; height: 17px; padding: 0 6px; font-size: 11px; line-height: 15px; border-radius: 3px; vertical-align: middle; }
+table.erp-grid .badge, table.erp-grid .chip-muted { font-size: 10px; padding: 0 5px; line-height: 14px; margin-left: 3px; }
+.filter-input {
+  display: block; width: 100%; min-width: 0; height: 22px; min-height: 0 !important; padding: 1px 4px !important; font-size: 11px !important;
+  border: 1px solid var(--input-border); border-radius: 3px; background: var(--input-bg); color: var(--text); font-weight: 400;
+}
+.filter-number { text-align: right; }
+.filter-pop { position: relative; }
+.filter-pop > summary { list-style: none; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 18px; color: var(--muted); }
+.filter-pop > summary::-webkit-details-marker { display: none; }
+.filter-pop > summary.active { color: var(--text); border-color: var(--primary); }
+.filter-pop-body {
+  position: absolute; z-index: 10; top: 100%; left: 0; display: flex; gap: 4px; align-items: center; padding: 6px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 6px 16px var(--shadow);
+}
+.filter-pop-body select, .filter-pop-body input { min-height: 28px; height: 28px; padding: 2px 6px; font-size: 12px; width: auto; }
+.filter-note { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
 .btn.link { text-decoration: underline; color: var(--primary); min-height: 0; padding: 0 4px; }
-table.erp-grid tfoot td { background: var(--th-bg); font-size: 12px; border-top: 2px solid var(--grid-head-bg); vertical-align: top; }
-table.erp-grid tfoot td.sticky-right { background: var(--th-bg); }
-.summary-count { font-weight: 600; white-space: nowrap; }
-.data-grid { margin-bottom: 4px; }
-table.erp-grid td.clip-wide { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.filter-number { min-width: 52px !important; max-width: 90px; text-align: right; }
-table.erp-grid td.clip-sm { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summary-count { font-weight: 600; }
+.data-grid .pager { margin-top: 4px; gap: 10px; }
+.data-grid .pager .btn { min-height: 26px; height: 26px; padding: 0 10px; font-size: 12px; }
+
+/* Toolbars above the grids: a little lower than form fields. */
+.toolbar input[type='search'], .toolbar input[type='date'], .toolbar .btn { min-height: 32px; }
+.app-header .btn { min-height: 30px; }

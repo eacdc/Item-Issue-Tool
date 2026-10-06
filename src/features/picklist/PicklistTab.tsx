@@ -29,7 +29,7 @@ export function PicklistTab() {
   return <PicklistList onSelect={setSelected} version={listVersion} />;
 }
 
-const PAGE_SIZES = [50, 150, 500, 1000];
+const PAGE_SIZES = [30, 100, 500, 1000];
 /** Lines fetched in one go; the grid filters, sorts, totals and pages them in the browser. */
 const FETCH_LIMIT = 5000;
 
@@ -73,15 +73,15 @@ function PicklistList({ onSelect, version }: { onSelect: (line: PicklistLine) =>
 
   const columns = useMemo<Column<PicklistLine>[]>(() => [
     textColumn<PicklistLine>('picklistNo', 'Picklist No', (r) => r.picklistNo, {
-      className: 'mono nowrap',
+      className: 'mono', width: 8,
       render: (r) => <span title={`Picklist date ${formatDate(r.picklistDate)}`}>{r.picklistNo}</span>,
     }),
-    textColumn<PicklistLine>('client', 'Client', (r) => r.clientName, { className: 'clip' }),
-    textColumn<PicklistLine>('pwo', 'PWO No', (r) => r.jobContentNo ?? r.jobCardNo, { className: 'mono nowrap' }),
-    textColumn<PicklistLine>('jobName', 'Job Name', (r) => r.jobName, { className: 'clip' }),
-    textColumn<PicklistLine>('contentName', 'Content Name', (r) => r.contentName, { className: 'clip' }),
+    textColumn<PicklistLine>('client', 'Client', (r) => r.clientName, { width: 8.5 }),
+    textColumn<PicklistLine>('pwo', 'PWO No', (r) => r.jobContentNo ?? r.jobCardNo, { className: 'mono', width: 8.5 }),
+    textColumn<PicklistLine>('jobName', 'Job Name', (r) => r.jobName, { width: 10 }),
+    textColumn<PicklistLine>('contentName', 'Content Name', (r) => r.contentName, { width: 8 }),
     ...itemColumns<PicklistLine>((r) => r.item, ['code', 'group']),
-    textColumn<PicklistLine>('division', 'Division', (r) => r.division),
+    textColumn<PicklistLine>('division', 'Division', (r) => r.division, { width: 5.5 }),
     ...itemColumns<PicklistLine>((r) => r.item, ['quality', 'gsm', 'sizeW', 'sizeL', 'manufacturer', 'certification', 'unit']),
     // An item's stock repeats on each of its lines: count it once in the total.
     qtyColumn<PicklistLine>('physical', 'Physical Stock', (r) => r.item.physicalStock, (r) => r.item, { distinctBy: (r) => r.item.itemId }),
@@ -92,11 +92,11 @@ function PicklistList({ onSelect, version }: { onSelect: (line: PicklistLine) =>
     }),
     showClosed
       ? {
-          id: 'closed', header: 'Closed', type: 'date', value: (r) => r.closedDate, sticky: true, className: 'nowrap small',
+          id: 'closed', header: 'Closed', type: 'date', value: (r) => r.closedDate, width: 10,
           render: (r) => <>{formatDateTime(r.closedDate)}{r.closedBy && <span className="muted"> · {r.closedBy}</span>}</>,
         }
       : {
-          id: 'actions', header: 'Actions', type: 'text', value: () => null, filterable: false, sticky: true, className: 'actions',
+          id: 'actions', header: 'Actions', type: 'text', value: () => null, filterable: false, className: 'actions', width: 8.5,
           render: (r) => (
             <>
               <button type="button" className="btn btn-small btn-issue" onClick={(e) => (e.stopPropagation(), onSelect(r))}>Issue</button>{' '}
