@@ -10,6 +10,9 @@ export interface LinesContext {
   jobCardNo: string | null;
   jobName: string | null;
   contentName: string | null;
+  /** Direct issue: the voucher's department, shown on every line with the line's process and machine. */
+  departmentName?: string | null;
+  direct?: boolean;
 }
 
 interface Props {
@@ -26,12 +29,25 @@ export function IssueLinesTable({ lines, context, onRemove, disabled }: Props) {
     textColumn<DraftLine>('jobCardNo', 'Job Card No.', () => context.jobCardNo, { className: 'mono' }),
     textColumn<DraftLine>('jobName', 'Job Name', () => context.jobName),
     textColumn<DraftLine>('contentName', 'Content Name', () => context.contentName),
-    ...itemColumns<DraftLine>((l) => l.item, ['code', 'group', 'name', 'unit'], { unit: 'Unit' }),
+    ...(context.direct
+      ? [
+          textColumn<DraftLine>('process', 'Process', (l) => l.process?.processName ?? null),
+          textColumn<DraftLine>('machine', 'Machine', (l) => l.process?.machineName ?? null),
+          textColumn<DraftLine>('department', 'Department', () => context.departmentName ?? null),
+          ...itemColumns<DraftLine>((l) => l.item, ['code', 'group'], {}),
+          textColumn<DraftLine>('subGroup', 'Sub Group', (l) => l.item.itemSubGroupName ?? null, { width: 6 }),
+          ...itemColumns<DraftLine>((l) => l.item, ['name', 'unit'], { unit: 'Unit' }),
+        ]
+      : itemColumns<DraftLine>((l) => l.item, ['code', 'group', 'name', 'unit'], { unit: 'Unit' })),
     qtyColumn<DraftLine>('issueQty', 'Issue Qty', (l) => l.quantity, (l) => l.item, { className: 'strong' }),
     textColumn<DraftLine>('batchNo', 'Batch No', (l) => l.batch.batchKey.batchNo, { className: 'mono' }),
     textColumn<DraftLine>('supplierBatchNo', 'Supplier Batch No', (l) => l.batch.supplierBatchNo),
-    textColumn<DraftLine>('grnNo', 'GRN No', (l) => l.batch.grnNo, { render: (l) => l.batch.grnNo ?? <span className="muted">opening</span> }),
-    dateColumn<DraftLine>('grnDate', 'GRN Date', (l) => l.batch.grnDate),
+    ...(context.direct
+      ? []
+      : [
+          textColumn<DraftLine>('grnNo', 'GRN No', (l) => l.batch.grnNo, { render: (l) => l.batch.grnNo ?? <span className="muted">opening</span> }),
+          dateColumn<DraftLine>('grnDate', 'GRN Date', (l) => l.batch.grnDate),
+        ]),
     textColumn<DraftLine>('warehouse', 'Warehouse', (l) => l.batch.warehouseName),
     textColumn<DraftLine>('bin', 'Bin', (l) => l.batch.binName),
     ...(onRemove

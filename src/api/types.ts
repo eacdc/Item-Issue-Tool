@@ -48,6 +48,11 @@ export interface Item {
   physicalStock: number;
   /** ItemMaster.AllocatedStock. */
   allocatedStock: number;
+  itemSubGroupName?: string | null;
+  /** Physical − allocated, as the ERP's issue screen shows it. */
+  freeStock?: number;
+  incomingStock?: number;
+  unapprovedStock?: number;
 }
 
 export interface PicklistLine {
@@ -94,6 +99,9 @@ export interface PlannedItem extends Item {
   required: number;
   issued: number;
   pending: number;
+  /** The process the item is planned for (the first when several). */
+  processId?: number | null;
+  processName?: string | null;
 }
 
 export interface RequirementGroup {
@@ -136,6 +144,20 @@ export interface JobSearch {
   jobStatus: JobStatus | null;
 }
 
+export interface Process {
+  processId: number;
+  processName: string | null;
+  departmentId: number | null;
+  /** The machine planned for the process on the job, if any. */
+  plannedMachineId: number | null;
+}
+
+export interface Machine {
+  machineId: number;
+  machineName: string | null;
+  departmentId: number | null;
+}
+
 export interface SalesPerson {
   ledgerId: number;
   ledgerName: string | null;
@@ -143,6 +165,11 @@ export interface SalesPerson {
 
 export interface ItemSearchRow extends Item {
   planned: boolean;
+  processId?: number | null;
+  processName?: string | null;
+  /** ItemMaster's supplier reference, when the database has the column. */
+  supplierReference?: string | null;
+  unitDecimalPlace?: number;
   required?: number;
   issued?: number;
   pending?: number;
@@ -203,6 +230,9 @@ export interface IssueLineRequest {
   warehouseId: number;
   batchNo: string | null;
   quantity: number;
+  /** Direct issue: the process and machine chosen for the line. */
+  processId?: number | null;
+  machineId?: number | null;
 }
 
 export interface PostIssueRequest {
@@ -211,6 +241,8 @@ export interface PostIssueRequest {
   voucherDate: string;
   picklistDetailId?: number;
   jobContentId?: number;
+  /** Direct issue to no job: the ERP's "Other". */
+  noJob?: boolean;
   departmentId?: number;
   slipNo?: string | null;
   floorWarehouseId: number;
@@ -362,6 +394,8 @@ export interface IssueToolApi {
   jobContents(filters: JobSearch): Promise<{ rows: JobContent[]; truncated?: boolean }>;
   clients(): Promise<{ clients: string[] }>;
   salesPersons(): Promise<{ salesPersons: SalesPerson[] }>;
+  processes(jobContentId?: number): Promise<{ processes: Process[] }>;
+  machines(): Promise<{ machines: Machine[] }>;
   items(search: string, jobContentId?: number): Promise<{ rows: ItemSearchRow[] }>;
   batches(itemId: number): Promise<ItemBatches>;
   floorWarehouses(): Promise<{ warehouses: FloorWarehouse[] }>;

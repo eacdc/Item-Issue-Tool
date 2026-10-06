@@ -357,3 +357,24 @@ table.erp-grid tr.row-started { background: #c9f7d9; }
 table.erp-grid tr.row-started:hover { background: #b2f0c7; }
 :root[data-theme='dark'] table.erp-grid tr.row-started { background: #14412a; }
 :root[data-theme='dark'] table.erp-grid tr.row-started:hover { background: #1a5236; }
+.modal-full { max-width: 96vw; }
+
+/* ── direct issue header, as the ERP's Item Issue screen ────────────────── */
+.direct-header { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px 12px; align-items: end; }
+.direct-header input, .direct-header select { min-height: 32px; font-size: 13px; }
+.direct-header input[readonly] { background: var(--subtle); }
+.direct-header .job-no { grid-column: span 2; }
+.job-no-row { display: flex; gap: 6px; }
+.job-no-row input { flex: 1; }
+.job-no-row .btn { min-height: 32px; padding: 0 12px; }
+.direct-header .job-card-select { grid-column: span 2; }
+.direct-job-summary { grid-column: span 4; margin: 0 0 6px; font-size: 13px; }
+.radio-group { border: 0; padding: 0; margin: 0; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; min-height: 32px; }
+.radio-group legend { font-size: 13px; color: var(--muted); padding: 0; margin-bottom: 4px; width: 100%; }
+.radio-group input[type='radio'] { width: 16px; height: 16px; }
+.direct-refresh { display: flex; justify-content: flex-end; }
+.save-row { align-items: center; gap: 16px; }
+@media (max-width: 1100px) {
+  .direct-header { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .direct-job-summary { grid-column: span 2; }
+}

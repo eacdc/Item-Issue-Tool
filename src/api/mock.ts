@@ -15,7 +15,7 @@ import { ApiError } from './errors';
 import { getToken, setToken } from '../auth/token';
 import type {
   Batch, ClosePicklistLineResponse, DeleteIssueResponse, Department, FloorWarehouse, HistoryIssue, HistoryLine, HistoryResponse, IssueToolApi,
-  IssueWarning, Item, ItemBatches, ItemSearchRow, JobContent, JobSearch, LoginRequest, LoginResponse, Page, PicklistLine,
+  IssueWarning, Item, ItemBatches, ItemSearchRow, JobContent, JobSearch, LoginRequest, Machine, Process, LoginResponse, Page, PicklistLine,
   PicklistQuery, PostIssueRequest, PostIssueResponse, RefreshStockResponse, SalesPerson, SessionInfo,
 } from './types';
 
@@ -265,10 +265,15 @@ export class MockApi implements IssueToolApi {
     const found = this.data.items.find((i) => i.itemId === itemId);
     if (!found) throw new ApiError(404, 'UNKNOWN_ITEM', 'The item does not exist.');
     const physicalStock = round(this.data.batches.filter((b) => b.itemId === itemId).reduce((s, b) => s + b.batchStock, 0));
-    return { ...found, physicalStock };
+    return {
+      ...found, physicalStock, itemSubGroupName: found.itemGroupId === 2 ? 'Reel' : null,
+      freeStock: round(physicalStock - found.allocatedStock), incomingStock: found.itemId === 9410 ? 2000 : 0, unapprovedStock: 0,
+    };
   }
 
   private content(id: number): MockContent {
+    // 0 is "Other": an issue to no job.
+    if (id === 0) return { jobContentId: 0, jobBookingId: 0, jobCardNo: '', jobContentNo: '', jobName: '', contentName: '', clientName: '', departmentId: 0, planned: [] };
     const c = this.data.contents.find((x) => x.jobContentId === id);
     if (!c) throw new ApiError(400, 'UNKNOWN_JOB_CONTENT', 'The job content does not exist or has been deleted.');
     return c;
@@ -427,6 +432,29 @@ export class MockApi implements IssueToolApi {
     return { salesPersons: [{ ledgerId: 501, ledgerName: 'AMIT SHARMA' }, { ledgerId: 502, ledgerName: 'PRIYA DAS' }] };
   }
 
+  async processes(jobContentId?: number): Promise<{ processes: Process[] }> {
+    await this.guard();
+    const all: Process[] = [
+      { processId: 10337, processName: 'Printing Front Side', departmentId: 100, plannedMachineId: 14 },
+      { processId: 10401, processName: 'Lamination', departmentId: 102, plannedMachineId: null },
+      { processId: 10510, processName: 'Die Cutting', departmentId: 101, plannedMachineId: 16 },
+      { processId: 10620, processName: 'Packing', departmentId: 103, plannedMachineId: null },
+    ];
+    return { processes: jobContentId ? all.slice(0, 3) : all };
+  }
+
+  async machines(): Promise<{ machines: Machine[] }> {
+    await this.guard();
+    return {
+      machines: [
+        { machineId: 14, machineName: 'CD102 - 6L', departmentId: 100 },
+        { machineId: 15, machineName: 'SM74 - 4C', departmentId: 100 },
+        { machineId: 16, machineName: 'Bobst Die Cutter', departmentId: 101 },
+        { machineId: 17, machineName: 'Thermal Laminator', departmentId: 102 },
+      ],
+    };
+  }
+
   async items(search: string, jobContentId?: number): Promise<{ rows: ItemSearchRow[] }> {
     await this.guard();
     const tokens = search.toLowerCase().split(/\s+/).filter(Boolean);
@@ -439,13 +467,14 @@ export class MockApi implements IssueToolApi {
           .some((v) => String(v ?? '').toLowerCase().includes(t))))
         .map((it) => this.item(it.itemId))
       : [];
-    if (!jobContentId) return { rows: found.map((it) => ({ ...it, planned: false })) };
+    const extras = (it: Item) => ({ supplierReference: null, unitDecimalPlace: unitKey(it.stockUnit) === 'KG' ? 3 : 0 });
+    if (!jobContentId) return { rows: found.map((it) => ({ ...it, ...extras(it), planned: false })) };
 
     const req = this.requirement(this.content(jobContentId));
     const pendingFor = (it: Item) => req.requirementGroups.find((g) => g.itemGroupId === it.itemGroupId && unitKey(g.stockUnit) === unitKey(it.stockUnit))?.pending ?? 0;
-    const planned = req.plannedItems.map((p) => ({ ...p, planned: true, pendingForJob: pendingFor(p) }));
+    const planned = req.plannedItems.map((p) => ({ ...p, ...extras(p), processId: 10337, processName: 'Printing Front Side', planned: true, pendingForJob: pendingFor(p) }));
     const seen = new Set(planned.map((p) => p.itemId));
-    return { rows: [...planned, ...found.filter((f) => !seen.has(f.itemId)).map((f) => ({ ...f, planned: false, pendingForJob: pendingFor(f) }))] };
+    return { rows: [...planned, ...found.filter((f) => !seen.has(f.itemId)).map((f) => ({ ...f, ...extras(f), planned: false, pendingForJob: pendingFor(f) }))] };
   }
 
   async batches(itemId: number): Promise<ItemBatches> {
@@ -528,11 +557,14 @@ export class MockApi implements IssueToolApi {
           message: `Total ${total} ${unit} is more than the picklist's pending ${pending} ${unit}.` });
       }
     } else {
-      const c = this.content(request.jobContentId ?? -1);
+      const c = this.content(request.noJob ? 0 : request.jobContentId ?? -1);
       contentId = c.jobContentId;
       if (!this.data.departments.some((d) => d.departmentId === request.departmentId)) {
         throw new ApiError(400, 'UNKNOWN_DEPARTMENT', 'The department does not exist.');
       }
+      if (request.noJob) {
+        // No job: nothing to measure an over-issue against.
+      } else {
       const req = this.requirement(c);
       const byGroup = new Map<string, { itemGroupId: number; unit: string | null; qty: number }>();
       for (const l of request.lines) {
@@ -550,6 +582,7 @@ export class MockApi implements IssueToolApi {
             message: r
               ? `Total ${g.qty} ${g.unit} is more than the job's pending requirement of ${pending} ${g.unit}.`
               : `The job content has no planned requirement for this item group in ${g.unit}. Issuing ${g.qty} ${g.unit} is all over-issue.` });
+        }
         }
       }
     }
@@ -595,8 +628,8 @@ export class MockApi implements IssueToolApi {
         ItemID: l.itemId, StockUnit: it.stockUnit, IssueQuantity: l.quantity, ParentTransactionID: l.parentTransactionId,
         BatchID: b.batchId, BatchNo: l.batchNo, WarehouseID: l.warehouseId, FloorWarehouseID: request.floorWarehouseId,
         JobBookingID: c.jobBookingId, JobBookingJobCardContentsID: contentId,
-        PicklistTransactionID: pickLine?.picklistTransactionId ?? 0, MachineID: pickLine ? 14 : 0,
-        DepartmentID: pickLine?.departmentId ?? 0, ProcessID: pickLine ? 10337 : 0, PicklistReleaseTransactionID: 0,
+        PicklistTransactionID: pickLine?.picklistTransactionId ?? 0, MachineID: pickLine ? 14 : l.machineId ?? 0,
+        DepartmentID: pickLine?.departmentId ?? 0, ProcessID: pickLine ? 10337 : l.processId ?? 0, PicklistReleaseTransactionID: 0,
       };
     });
 

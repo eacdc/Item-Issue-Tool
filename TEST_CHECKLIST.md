@@ -47,13 +47,22 @@ Job content `J06482_26_27[1_1]`, planned R01312 at 68.84 Kg; the storekeeper iss
 - [ ] Tick, press **Issue anyway**. Writes on: a voucher number appears (mock: `IS17256_26_27`). Writes off: the dry-run result, no number. In its rows, the header has JobBookingID **0** and DeliveryNoteNo shows “(rolled back)”, because a blank slip takes the voucher number; the line has the job's JobBookingID and PicklistTransactionID, MachineID, DepartmentID, ProcessID all 0.
 - [ ] Mock only: Mock API → **Fail the stock refresh on the next save**, make another small direct issue. The result says the issue is saved but the stock summary was not updated, and **Retry stock refresh** succeeds.
 
+## 2b. Direct issue screen
+
+- [ ] The header shows Issue No. ("Given on save"), Issue Date, Picklist Type (Job Allocated / All), Job Consumables / Other, Refresh, Job Card No. with **Click** and ⊞, Process Name, Department, Machine, Required Qty In (SU) and the Job Card list.
+- [ ] Type `J06482`, press **Click**: "2 job cards match"; pick `J06482_26_27[1_1]` in the Job Card list. The department is suggested; the item grid lists the planned R01312 with its process.
+- [ ] Click R01312: Process Name and Machine fill from the plan, Required Qty shows 68.84 Kg, Stock Batch Wise lists its batch. Add a quantity: the line shows Process, Machine and Department.
+- [ ] Change the process, add another quantity from the same batch: a second line (different process).
+- [ ] **All**: a search box appears above the item grid and finds any item.
+- [ ] **Other**: confirms dropping the lines, empties the job fields; items are searched; the confirmation reads "Issue to Other (no job)"; the dry run shows JobBookingID and content 0.
+
 ## 2a. Finding a job (Direct issue)
 
 - [ ] Press **Search** with no filter: "Enter a job number, or choose a client, sales person or job date."
 - [ ] Choose **Sales Person** and **Job Date: Last 30 days**, Search: rows list newest job first with Released Date, Booking No, Job Card No, Job Name, Content Name, Item Code, Required / Issued / Pending Sheets, Kg and Running Meter, and Job Status.
 - [ ] **Job Status** narrows to Pending / Closed / Cancelled; **Custom range…** shows From / To dates; **Client Name** suggests clients as you type.
 - [ ] A row whose paper has already been issued is green.
-- [ ] Click a row: the content opens with its paper already selected and its batches loaded. **Change job** returns to the same search and results.
+- [ ] The search opens from ⊞ next to Job Card No. Click a row: the content opens with its paper already selected and its batches loaded. ⊞ again shows the same search and results.
 
 ## 3. Closing a picklist line
 

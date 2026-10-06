@@ -6,7 +6,7 @@ import { ApiError } from './errors';
 import { getToken, setToken } from '../auth/token';
 import type {
   ClosePicklistLineResponse, DeleteIssueResponse, Department, FloorWarehouse, HistoryResponse, IssueToolApi, ItemBatches, ItemSearchRow,
-  JobContent, JobSearch, LoginRequest, LoginResponse, Page, PicklistLine, PicklistQuery, PostIssueRequest, PostIssueResponse,
+  JobContent, JobSearch, LoginRequest, Machine, Process, LoginResponse, Page, PicklistLine, PicklistQuery, PostIssueRequest, PostIssueResponse,
   RefreshStockResponse, SalesPerson, SessionInfo,
 } from './types';
 
@@ -118,6 +118,14 @@ export class HttpApi implements IssueToolApi {
 
   salesPersons() {
     return this.tool<{ salesPersons: SalesPerson[] }>('GET', '/lookups/sales-persons');
+  }
+
+  processes(jobContentId?: number) {
+    return this.tool<{ processes: Process[] }>('GET', `/lookups/processes${jobContentId ? `?jobContentId=${jobContentId}` : ''}`);
+  }
+
+  machines() {
+    return this.tool<{ machines: Machine[] }>('GET', '/lookups/machines');
   }
 
   items(search: string, jobContentId?: number) {

@@ -9,10 +9,22 @@ import { round3 } from './quantity';
 export interface DraftLine {
   /** Local id for React keys and removal. */
   key: string;
-  item: Pick<Item, 'itemId' | 'itemCode' | 'itemName' | 'itemGroupId' | 'stockUnit'> & Partial<Pick<Item, 'itemGroupName' | 'gsm' | 'sizeW' | 'sizeL'>>;
+  item: Pick<Item, 'itemId' | 'itemCode' | 'itemName' | 'itemGroupId' | 'stockUnit'> & Partial<Pick<Item, 'itemGroupName' | 'itemSubGroupName' | 'gsm' | 'sizeW' | 'sizeL'>>;
   batch: Batch;
   quantity: number;
+  /** Direct issue: the process and machine chosen when the line was added. */
+  process?: LineProcess;
 }
+
+export interface LineProcess {
+  processId: number | null;
+  processName: string | null;
+  machineId: number | null;
+  machineName: string | null;
+}
+
+const sameProcess = (a?: LineProcess, b?: LineProcess) =>
+  (a?.processId ?? null) === (b?.processId ?? null) && (a?.machineId ?? null) === (b?.machineId ?? null);
 
 export function sameBatch(a: BatchKey, b: BatchKey): boolean {
   return a.parentTransactionId === b.parentTransactionId && a.warehouseId === b.warehouseId && (a.batchNo ?? '') === (b.batchNo ?? '');
@@ -54,17 +66,17 @@ export function takenFromBatch(lines: DraftLine[], itemId: number, key: BatchKey
 let counter = 0;
 
 /**
- * Add a line. A second quantity from the same batch is merged into the
- * existing line rather than creating a duplicate, so the voucher keeps one
- * line per batch as the ERP does.
+ * Add a line. A second quantity from the same batch (for the same process
+ * and machine) is merged into the existing line rather than creating a
+ * duplicate, so the voucher keeps one line per batch as the ERP does.
  */
-export function addLine(lines: DraftLine[], item: DraftLine['item'], batch: Batch, quantity: number): DraftLine[] {
-  const existing = lines.find((l) => l.item.itemId === item.itemId && sameBatch(l.batch.batchKey, batch.batchKey));
+export function addLine(lines: DraftLine[], item: DraftLine['item'], batch: Batch, quantity: number, process?: LineProcess): DraftLine[] {
+  const existing = lines.find((l) => l.item.itemId === item.itemId && sameBatch(l.batch.batchKey, batch.batchKey) && sameProcess(l.process, process));
   if (existing) {
     return lines.map((l) => (l === existing ? { ...l, batch, quantity: round3(l.quantity + quantity) } : l));
   }
   counter += 1;
-  return [...lines, { key: `line-${counter}`, item, batch, quantity: round3(quantity) }];
+  return [...lines, { key: `line-${counter}`, item, batch, quantity: round3(quantity), ...(process ? { process } : {}) }];
 }
 
 export function removeLine(lines: DraftLine[], key: string): DraftLine[] {
@@ -88,5 +100,6 @@ export function toRequestLines(lines: DraftLine[]): IssueLineRequest[] {
     warehouseId: l.batch.batchKey.warehouseId,
     batchNo: l.batch.batchKey.batchNo,
     quantity: l.quantity,
+    ...(l.process ? { processId: l.process.processId, machineId: l.process.machineId } : {}),
   }));
 }

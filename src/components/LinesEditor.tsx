@@ -3,7 +3,7 @@ import type { Batch, Item, ItemBatches } from '../api';
 import { BatchTable } from './BatchTable';
 import { IssueLinesTable, type LinesContext } from './IssueLinesTable';
 import { QtyInput } from './QtyInput';
-import { addLine, remaining, removeLine, takenFromBatch, totalsByUnit, type DraftLine } from '../lib/lines';
+import { addLine, remaining, removeLine, takenFromBatch, totalsByUnit, type DraftLine, type LineProcess } from '../lib/lines';
 import { formatQty, parseQuantity, qtyWithUnit } from '../lib/quantity';
 
 interface Props {
@@ -20,6 +20,11 @@ interface Props {
   context: LinesContext;
   /** Already issued against the picklist line or job, shown next to the quantity as on the ERP screen. */
   alreadyIssued?: number;
+  /** Direct issue: the process and machine to stamp on lines added now; the ERP direct screen's grids. */
+  lineProcess?: LineProcess;
+  direct?: boolean;
+  /** No job ("Other"): there is no pending figure, so only the total is shown. */
+  noPending?: boolean;
   disabled?: boolean;
 }
 
@@ -27,7 +32,7 @@ interface Props {
  * Pick a batch, type a quantity, Add. Several batches make several lines; the
  * running total is shown against the pending quantity, always with its unit.
  */
-export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel, pending, addedTowardPending, context, alreadyIssued, disabled }: Props) {
+export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel, pending, addedTowardPending, context, alreadyIssued, lineProcess, direct, noPending, disabled }: Props) {
   const [selected, setSelected] = useState<Batch | null>(null);
   const [qtyText, setQtyText] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -60,19 +65,19 @@ export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel,
       qtyRef.current?.focus();
       return;
     }
-    onLinesChange(addLine(lines, item, selected, quantity));
+    onLinesChange(addLine(lines, item, selected, quantity, lineProcess));
     setSelected(null);
     setQtyText('');
     setError(null);
   }
 
-  const over = addedTowardPending > pending;
+  const over = !noPending && addedTowardPending > pending;
   const totals = totalsByUnit(lines);
 
   return (
     <section className="panel">
       <div className="panel-title">
-        <h3>Batches of {item.itemCode}</h3>
+        <h3>{direct ? 'Stock Batch Wise' : `Batches of ${item.itemCode}`}</h3>
         <span className="muted">
           {batches.data && (
             <>
@@ -96,6 +101,7 @@ export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel,
           selected={selected?.batchKey ?? null}
           takenFrom={(key) => takenFromBatch(lines, item.itemId, key)}
           onSelect={choose}
+          direct={direct}
         />
       ) : (
         !batches.error && <p className="muted">Loading batches…</p>
@@ -129,12 +135,12 @@ export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel,
         <IssueLinesTable lines={lines} context={context} onRemove={(key) => onLinesChange(removeLine(lines, key))} disabled={disabled} />
       )}
 
-      <div className={`running-total${over ? ' is-over' : addedTowardPending === pending && pending > 0 ? ' is-exact' : ''}`}>
+      <div className={`running-total${over ? ' is-over' : !noPending && addedTowardPending === pending && pending > 0 ? ' is-exact' : ''}`}>
         <span>
           Total{' '}
           <strong>{totals.length ? totals.map((t) => qtyWithUnit(t.total, t.stockUnit)).join(' + ') : qtyWithUnit(0, unit)}</strong>
         </span>
-        <span>
+        {!noPending && <><span>
           {pendingLabel} <strong>{qtyWithUnit(pending, unit)}</strong>
         </span>
         <span>
@@ -143,7 +149,7 @@ export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel,
           ) : (
             <>Left <strong>{formatQty(remaining(pending, addedTowardPending))} {unit}</strong></>
           )}
-        </span>
+        </span></>}
       </div>
     </section>
   );

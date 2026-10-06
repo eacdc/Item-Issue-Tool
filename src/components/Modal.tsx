@@ -6,9 +6,11 @@ interface Props {
   footer?: ReactNode;
   onClose?: () => void;
   wide?: boolean;
+  /** Nearly the whole window, for a grid. */
+  full?: boolean;
 }
 
-export function Modal({ title, children, footer, onClose, wide }: Props) {
+export function Modal({ title, children, footer, onClose, wide, full }: Props) {
   useEffect(() => {
     if (!onClose) return;
     const onKey = (e: KeyboardEvent) => {
@@ -20,7 +22,7 @@ export function Modal({ title, children, footer, onClose, wide }: Props) {
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={title}>
-      <div className={`modal${wide ? ' modal-wide' : ''}`}>
+      <div className={`modal${wide ? ' modal-wide' : ''}${full ? ' modal-full' : ''}`}>
         <header className="modal-header">
           <h2>{title}</h2>
           {onClose && (

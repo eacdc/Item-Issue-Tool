@@ -79,3 +79,20 @@ describe('request id', () => {
     expect(newRequestId()).not.toBe(a);
   });
 });
+
+describe('lines with a process and machine (direct issue)', () => {
+  it('keeps one line per batch per process and sends the process and machine', () => {
+    const b = batch(60325, 100);
+    const printing = { processId: 10337, processName: 'Printing', machineId: 14, machineName: 'CD102' };
+    let lines = addLine([], sheet, b, 10, printing);
+    lines = addLine(lines, sheet, b, 5, printing);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]!.quantity).toBe(15);
+    lines = addLine(lines, sheet, b, 3, { ...printing, processId: 10401, processName: 'Lamination' });
+    expect(lines).toHaveLength(2);
+    const req = toRequestLines(lines);
+    expect(req[0]).toMatchObject({ processId: 10337, machineId: 14, quantity: 15 });
+    expect(req[1]).toMatchObject({ processId: 10401, machineId: 14, quantity: 3 });
+    expect(toRequestLines(addLine([], sheet, b, 1))[0]).not.toHaveProperty('processId');
+  });
+});

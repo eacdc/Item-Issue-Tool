@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, errorMessage, type Department, type FloorWarehouse, type SalesPerson } from '../api';
+import { api, errorMessage, type Department, type FloorWarehouse, type Machine, type Process, type SalesPerson } from '../api';
 
 /** Lookups change rarely; load each once per page load, and retry after a failure. */
 let warehousesPromise: Promise<FloorWarehouse[]> | null = null;
@@ -49,3 +49,32 @@ const resetSalesPersons = () => {
 
 export const useClients = () => useCached(getClients, resetClients);
 export const useSalesPersons = () => useCached(getSalesPersons, resetSalesPersons);
+
+let machinesPromise: Promise<Machine[]> | null = null;
+const getMachines = () => (machinesPromise ??= api.machines().then((r) => r.machines));
+const resetMachines = () => {
+  machinesPromise = null;
+};
+export const useMachines = () => useCached(getMachines, resetMachines);
+
+/** Processes of a job content, or every process when there is no job ("Other"). Not cached: they differ per job. */
+export function useProcesses(jobContentId: number | null, enabled: boolean) {
+  const [data, setData] = useState<Process[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!enabled) {
+      setData(null);
+      return;
+    }
+    let alive = true;
+    setData(null);
+    api.processes(jobContentId ?? undefined).then(
+      (r) => alive && (setData(r.processes), setError(null)),
+      (err) => alive && setError(errorMessage(err)),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [jobContentId, enabled]);
+  return { data, error };
+}
