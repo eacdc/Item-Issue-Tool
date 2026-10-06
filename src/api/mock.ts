@@ -505,7 +505,27 @@ export class MockApi implements IssueToolApi {
     if (!writes) {
       const response: PostIssueResponse = {
         status: 'DRY_RUN', dryRun: true, dryRunReason: this.writesEnabled ? 'REQUESTED' : 'WRITES_DISABLED',
-        voucherDate: request.voucherDate, fYear, warnings, wouldWrite: { header, lines: rows },
+        voucherDate: request.voucherDate, fYear, warnings,
+        wouldWrite: {
+          header,
+          lines: rows,
+          floorReceipt: {
+            header: {
+              ConsumptionTransactionID: 36600, VoucherID: -53, VoucherPrefix: 'RFS', MaxVoucherNo: this.nextVoucherNo + 100,
+              VoucherNo: `RFS${String(this.nextVoucherNo + 100).padStart(5, '0')}${suffix}`, VoucherDate: header.VoucherDate,
+              DepartmentID: header.DepartmentID, JobBookingID: 0, JobBookingJobCardContentsID: contentId,
+              ReturnTransactionID: header.TransactionID, TotalQuantity: total, Particular: null, Narration: '',
+            },
+            lines: rows.map((r) => ({
+              ConsumptionTransactionDetailID: 56600 + r.TransID, ConsumptionTransactionID: 36600, TransID: r.TransID,
+              ParentTransactionID: r.ParentTransactionID, IssueTransactionID: r.TransactionID, DepartmentID: header.DepartmentID,
+              ItemID: r.ItemID, ItemGroupID: r.ItemGroupID, JobBookingID: r.JobBookingID, JobBookingJobCardContentsID: contentId,
+              MachineID: r.MachineID, ProcessID: r.ProcessID, ConsumeQuantity: 0, ReturnQuantity: 0, IssueQuantity: 0,
+              ReceivedQuantity: r.IssueQuantity, WasteQuantity: 0, StockUnit: r.StockUnit, BatchNo: r.BatchNo, BatchID: r.BatchID,
+              WarehouseID: r.WarehouseID, FloorWarehouseID: r.FloorWarehouseID,
+            })),
+          },
+        },
       };
       this.posted.set(request.requestId, response);
       return response;
@@ -543,7 +563,9 @@ export class MockApi implements IssueToolApi {
     const failRefresh = this.failNextStockRefresh;
     this.failNextStockRefresh = false;
     const response: PostIssueResponse = {
-      status: 'POSTED', dryRun: false, replayed: false, transactionId, voucherNo, voucherDate: request.voucherDate, fYear,
+      status: 'POSTED', dryRun: false, replayed: false, transactionId, voucherNo,
+      floorReceiptVoucherNo: `RFS${String(this.nextVoucherNo + 99).padStart(5, '0')}${suffix}`,
+      voucherDate: request.voucherDate, fYear,
       lines: rows.map((r) => ({ transId: r.TransID, transactionDetailId: r.TransactionDetailID })), warnings,
       stockRefreshFailed: failRefresh,
       ...(failRefresh ? { stockRefreshError: 'Execution Timeout Expired. (mock)' } : {}),

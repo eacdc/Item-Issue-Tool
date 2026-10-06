@@ -187,6 +187,8 @@ export type DryRunReason = 'WRITES_DISABLED' | 'REQUESTED';
 export interface WouldWrite {
   header: Record<string, unknown> | null;
   lines: Record<string, unknown>[];
+  /** The "received on floor" voucher (RFS, VoucherID -53) written with every issue. */
+  floorReceipt?: { header?: Record<string, unknown> | null; headers?: Record<string, unknown>[]; lines: Record<string, unknown>[] };
 }
 
 export interface PostedIssue {
@@ -195,6 +197,8 @@ export interface PostedIssue {
   replayed: boolean;
   transactionId: number;
   voucherNo: string;
+  /** The RFS floor-receipt voucher written with the issue. */
+  floorReceiptVoucherNo?: string | null;
   voucherDate: string;
   fYear: string;
   lines: { transId: number; transactionDetailId: number }[];

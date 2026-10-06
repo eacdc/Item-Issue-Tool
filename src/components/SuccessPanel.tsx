@@ -34,6 +34,12 @@ export function SuccessPanel({ result, onNewIssue }: Props) {
           <summary>Rows the server would have written</summary>
           <RowsTable title="Header (ItemTransactionMain)" rows={result.wouldWrite.header ? [result.wouldWrite.header] : []} voucherNo={result.wouldWrite.header?.VoucherNo} />
           <RowsTable title="Lines (ItemTransactionDetail)" rows={result.wouldWrite.lines} voucherNo={result.wouldWrite.header?.VoucherNo} />
+          {result.wouldWrite.floorReceipt?.header && (
+            <RowsTable title="Floor receipt (ItemConsumptionMain, RFS)" rows={[result.wouldWrite.floorReceipt.header]} voucherNo={result.wouldWrite.header?.VoucherNo} />
+          )}
+          {!!result.wouldWrite.floorReceipt?.lines.length && (
+            <RowsTable title="Floor receipt lines (ItemConsumptionDetail)" rows={result.wouldWrite.floorReceipt.lines} voucherNo={result.wouldWrite.header?.VoucherNo} />
+          )}
         </details>
         <button type="button" className="btn btn-primary btn-large" onClick={onNewIssue} autoFocus>
           New issue
@@ -48,6 +54,7 @@ export function SuccessPanel({ result, onNewIssue }: Props) {
       <p className="voucher-no">{result.voucherNo}</p>
       <p className="muted">
         Voucher date {formatDate(result.voucherDate)} · {result.lines.length} line(s)
+        {result.floorReceiptVoucherNo && <> · floor receipt <span className="mono">{result.floorReceiptVoucherNo}</span></>}
       </p>
       {result.replayed && (
         <p className="notice notice-info">This form had already been saved. This is the same voucher; nothing new was written.</p>
@@ -78,10 +85,15 @@ export function SuccessPanel({ result, onNewIssue }: Props) {
  * A dry run's IDs and voucher number were rolled back and will be handed to
  * the next real save, so they are masked rather than shown as if allocated.
  */
-const ROLLED_BACK = new Set(['TransactionID', 'TransactionDetailID', 'MaxVoucherNo', 'VoucherNo']);
+const ROLLED_BACK = new Set([
+  'TransactionID', 'TransactionDetailID', 'MaxVoucherNo', 'VoucherNo',
+  'ConsumptionTransactionID', 'ConsumptionTransactionDetailID', 'IssueTransactionID',
+]);
 
 function cell(column: string, value: unknown, voucherNo: unknown): string {
   if (ROLLED_BACK.has(column) || (column === 'DeliveryNoteNo' && value && value === voucherNo)) return '(rolled back)';
+  // On the RFS header, ReturnTransactionID carries the rolled-back issue ID.
+  if (column === 'ReturnTransactionID' && typeof value === 'number' && value > 0) return '(rolled back)';
   return value === null || value === undefined ? 'NULL' : JSON.stringify(value);
 }
 
