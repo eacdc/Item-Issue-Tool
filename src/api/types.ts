@@ -396,7 +396,8 @@ export interface IssueToolApi {
   salesPersons(): Promise<{ salesPersons: SalesPerson[] }>;
   processes(jobContentId?: number): Promise<{ processes: Process[] }>;
   machines(): Promise<{ machines: Machine[] }>;
-  items(search: string, jobContentId?: number): Promise<{ rows: ItemSearchRow[] }>;
+  /** inStock: every item with physical stock (the ERP's "All"), narrowed by the search words if any. */
+  items(search: string, jobContentId?: number, inStock?: boolean): Promise<{ rows: ItemSearchRow[]; truncated?: boolean }>;
   batches(itemId: number): Promise<ItemBatches>;
   floorWarehouses(): Promise<{ warehouses: FloorWarehouse[] }>;
   departments(): Promise<{ departments: Department[] }>;

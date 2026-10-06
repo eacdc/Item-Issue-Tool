@@ -378,3 +378,5 @@ table.erp-grid tr.row-started:hover { background: #b2f0c7; }
   .direct-header { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .direct-job-summary { grid-column: span 2; }
 }
+/* The job's planned items in the direct item grid. */
+table.erp-grid tr.row-planned td:first-child { box-shadow: inset 3px 0 0 var(--ok); }

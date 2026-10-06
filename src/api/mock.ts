@@ -455,17 +455,18 @@ export class MockApi implements IssueToolApi {
     };
   }
 
-  async items(search: string, jobContentId?: number): Promise<{ rows: ItemSearchRow[] }> {
+  async items(search: string, jobContentId?: number, inStock = false): Promise<{ rows: ItemSearchRow[]; truncated?: boolean }> {
     await this.guard();
     const tokens = search.toLowerCase().split(/\s+/).filter(Boolean);
-    if (!jobContentId && search.trim().length < 2) {
-      throw new ApiError(400, 'VALIDATION_FAILED', 'search: Type at least 2 characters, or pass jobContentId.');
+    if (!jobContentId && !inStock && search.trim().length < 2) {
+      throw new ApiError(400, 'VALIDATION_FAILED', 'search: Type at least 2 characters, or pass jobContentId or inStock.');
     }
-    const found = tokens.length
+    const found = tokens.length || inStock
       ? this.data.items
         .filter((it) => tokens.every((t) => [it.itemCode, it.itemName, it.itemGroupName, it.quality, it.manufacturer, it.gsm, it.size]
           .some((v) => String(v ?? '').toLowerCase().includes(t))))
         .map((it) => this.item(it.itemId))
+        .filter((it) => !inStock || it.physicalStock > 0)
       : [];
     const extras = (it: Item) => ({ supplierReference: null, unitDecimalPlace: unitKey(it.stockUnit) === 'KG' ? 3 : 0 });
     if (!jobContentId) return { rows: found.map((it) => ({ ...it, ...extras(it), planned: false })) };

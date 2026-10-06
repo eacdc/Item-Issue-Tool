@@ -213,10 +213,10 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
           <fieldset className="radio-group" disabled={locked}>
             <legend>Picklist Type</legend>
             <label className="inline">
-              <input type="radio" name="scope" checked={scope === 'ALLOCATED'} disabled={noJob} onChange={() => setScope('ALLOCATED')} /> Job Allocated
+              <input type="radio" name="scope" checked={scope === 'ALLOCATED'} disabled={noJob} onChange={() => setScope('ALLOCATED')} title="The job's planned items, plus anything you search" /> Job Allocated
             </label>
             <label className="inline">
-              <input type="radio" name="scope" checked={scope === 'ALL'} onChange={() => setScope('ALL')} /> All
+              <input type="radio" name="scope" checked={scope === 'ALL'} onChange={() => setScope('ALL')} title="Every item in stock, filterable by column" /> All
             </label>
           </fieldset>
           <fieldset className="radio-group" disabled={locked}>
@@ -419,9 +419,13 @@ function requiredFor(content: JobContent, item: ItemSearchRow): number | null {
 }
 
 /**
- * The item grid, with the ERP direct screen's columns. "Job Allocated" lists
- * the job's planned items; "All" adds a search over every item. With no job
- * ("Other") it is always a search.
+ * The item grid, with the ERP direct screen's columns. The search box is
+ * always there: typing finds any item in the item master (code, name, group,
+ * quality, GSM, size, mill; every word must match), listed under the job's
+ * planned items, so a substitute or extra item is one search away.
+ * "Job Allocated" starts from the planned items; "All" (and "Other") starts
+ * from every item in stock, so the column filters search the whole list, as
+ * in the ERP.
  */
 function DirectItemGrid({ content, noJob, scope, selected, onSelect, refreshKey, inThisIssue, disabled }: {
   content: JobContent | null;
@@ -436,22 +440,26 @@ function DirectItemGrid({ content, noJob, scope, selected, onSelect, refreshKey,
   const [search, setSearch] = useState('');
   const debounced = useDebounced(search.trim());
   const [rows, setRows] = useState<ItemSearchRow[]>([]);
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const jobContentId = content?.jobContentId;
-  const term = scope === 'ALL' && debounced.length >= 2 ? debounced : '';
+  const waitingForJob = !noJob && !content;
+  const allInStock = scope === 'ALL';
+  const term = debounced.length >= 2 ? debounced : '';
 
   useEffect(() => {
-    if (!jobContentId && !term) {
+    if (waitingForJob || (!jobContentId && !term && !allInStock)) {
       setRows([]);
       return;
     }
     let alive = true;
     setLoading(true);
-    api.items(term, jobContentId).then(
+    api.items(term, jobContentId, allInStock).then(
       (r) => {
         if (!alive) return;
-        setRows(scope === 'ALLOCATED' ? r.rows.filter((x) => x.planned) : r.rows);
+        setRows(r.rows);
+        setTruncated(!!r.truncated);
         setError(null);
         setLoading(false);
       },
@@ -460,9 +468,13 @@ function DirectItemGrid({ content, noJob, scope, selected, onSelect, refreshKey,
     return () => {
       alive = false;
     };
-  }, [term, jobContentId, scope, refreshKey]);
+  }, [term, jobContentId, allInStock, waitingForJob, refreshKey]);
 
   const columns = useMemo<Column<ItemSearchRow>[]>(() => [
+    textColumn<ItemSearchRow>('type', 'Type', (r) => (r.planned ? 'Planned' : 'Other'), {
+      width: 4.5,
+      render: (r) => (r.planned ? <span className="badge">Planned</span> : <span className="muted">Other</span>),
+    }),
     textColumn<ItemSearchRow>('process', 'Process Name', (r) => r.processName ?? null, { width: 7 }),
     ...itemColumns<ItemSearchRow>((r) => r, ['code', 'group']),
     textColumn<ItemSearchRow>('subGroup', 'Sub Group', (r) => r.itemSubGroupName ?? null, { width: 6 }),
@@ -483,38 +495,48 @@ function DirectItemGrid({ content, noJob, scope, selected, onSelect, refreshKey,
     }),
   ], [inThisIssue]);
 
-  const hint = !noJob && !content
+  const hint = waitingForJob
     ? 'Choose a job card first: type it and press Click, or use ⊞ to find it.'
     : loading
       ? 'Loading…'
-      : scope === 'ALL' && !term && noJob
-        ? 'Type at least 2 characters to search items.'
-        : scope === 'ALL' && term
-          ? 'No item matches.'
-          : 'No planned items on this job card. Choose "All" to search every item.';
+      : term
+        ? 'No item matches the search.'
+        : noJob
+          ? 'Type in the search box to find the item.'
+          : 'No planned items on this job card. Type in the search box to find any item.';
 
   return (
     <section className="panel">
-      {scope === 'ALL' && (
-        <div className="toolbar">
-          <input
-            type="search"
-            className="search"
-            placeholder="Search any item: code, name, group, quality, GSM, size…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            disabled={disabled}
-          />
-          <span className="muted">{loading ? 'Searching…' : ''}</span>
-        </div>
-      )}
+      <div className="toolbar">
+        <input
+          type="search"
+          className="search"
+          placeholder="Search any item: code, name, group, quality, GSM, size, mill… (e.g. fbb 350 emami)"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          disabled={disabled || waitingForJob}
+        />
+        <span className="muted small">
+          {loading
+            ? 'Searching…'
+            : waitingForJob
+              ? ''
+              : allInStock
+                ? 'Every item in stock is listed; narrow it with the search or the column filters.'
+                : term
+                  ? 'Planned items first, then every matching item.'
+                  : 'Planned items of the job. Search to issue any other item (substitute or extra).'}
+        </span>
+      </div>
       {error && <p className="notice notice-error">{error}</p>}
+      {truncated && <p className="notice notice-warn">More items match than can be listed. Narrow the search.</p>}
       <DataGrid
         rows={rows}
         columns={columns}
         rowKey={(r) => r.itemId}
         onRowClick={(r) => !disabled && onSelect(r)}
-        rowClassName={(r) => (selected?.itemId === r.itemId ? 'selected' : undefined)}
+        rowClassName={(r) => [selected?.itemId === r.itemId ? 'selected' : '', r.planned ? 'row-planned' : ''].filter(Boolean).join(' ') || undefined}
+        pageSizes={rows.length > 30 ? [30, 100, 500] : undefined}
         noun="item"
         emptyText={hint}
       />

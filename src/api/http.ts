@@ -128,10 +128,11 @@ export class HttpApi implements IssueToolApi {
     return this.tool<{ machines: Machine[] }>('GET', '/lookups/machines');
   }
 
-  items(search: string, jobContentId?: number) {
+  items(search: string, jobContentId?: number, inStock = false) {
     const params = new URLSearchParams({ search });
     if (jobContentId) params.set('jobContentId', String(jobContentId));
-    return this.tool<{ rows: ItemSearchRow[] }>('GET', `/items?${params}`);
+    if (inStock) params.set('inStock', 'true');
+    return this.tool<{ rows: ItemSearchRow[]; truncated?: boolean }>('GET', `/items?${params}`);
   }
 
   batches(itemId: number) {
