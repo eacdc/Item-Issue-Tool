@@ -11,7 +11,7 @@ const issue = (voucherNo: string, itemCode: string, userName: string): HistoryIs
     transactionDetailId: 1, transId: 1, stockUnit: 'Kg', issueQuantity: 887, batchNo: '64703_PO02536_26_27_8044_2.00',
     warehouseName: 'Panchla', binName: 'Paper warehouse', floorWarehouseId: 16, floorWarehouseName: 'Floor-Panchla', floorBinName: 'Paper',
     picklistTransactionId: 15684, picklistNo: 'IPIC01234_26_27',
-    item: { itemId: 8044, itemCode, itemName: 'KRAFT REEL', itemGroupId: 2, itemGroupName: 'REEL', quality: null, gsm: null, size: null, manufacturer: null, stockUnit: 'Kg', physicalStock: 0 },
+    item: { itemId: 8044, itemCode, itemName: 'KRAFT REEL', itemGroupId: 2, itemGroupName: 'REEL', quality: null, gsm: null, size: null, sizeW: null, sizeL: null, manufacturer: null, certification: null, allocatedStock: 0, stockUnit: 'Kg', physicalStock: 0 },
   }],
 });
 

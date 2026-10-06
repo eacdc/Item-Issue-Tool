@@ -122,3 +122,32 @@ describe('double submit', () => {
     expect(history.rows).toHaveLength(1);
   });
 });
+
+describe('picklist list and close (mock)', () => {
+  const query = { search: '', page: 1, pageSize: 500, showFullyIssued: false, showClosed: false };
+
+  it('lists the newest picklist first and keeps closed lines apart', async () => {
+    const api = await signedInMock(false);
+    const open = await api.picklists(query);
+    const dates = open.rows.map((r) => r.picklistDate ?? '');
+    expect(dates).toEqual([...dates].sort().reverse());
+    expect(open.rows.every((r) => !r.closed)).toBe(true);
+
+    const closed = await api.picklists({ ...query, showClosed: true });
+    expect(closed.rows.map((r) => r.picklistNo)).toEqual(['IPIC03390_26_27']);
+    expect(closed.rows[0]!.closedBy).toBe('Admin');
+  });
+
+  it('closing is a dry run while writes are off, then really closes', async () => {
+    const dry = await signedInMock(false);
+    const result = await dry.closePicklistLine(109873);
+    expect(result.status).toBe('DRY_RUN');
+    expect((await dry.picklists(query)).rows.some((r) => r.picklistDetailId === 109873)).toBe(true);
+
+    const real = await signedInMock(true);
+    expect((await real.closePicklistLine(109873)).status).toBe('CLOSED');
+    expect((await real.picklists(query)).rows.some((r) => r.picklistDetailId === 109873)).toBe(false);
+    expect((await real.picklists({ ...query, showClosed: true })).rows.some((r) => r.picklistDetailId === 109873)).toBe(true);
+    await expect(real.closePicklistLine(109873)).rejects.toMatchObject({ code: 'PICKLIST_LINE_CLOSED' });
+  });
+});

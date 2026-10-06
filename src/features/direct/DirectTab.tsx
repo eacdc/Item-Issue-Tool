@@ -4,13 +4,14 @@ import { useSession } from '../../auth/AuthProvider';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { IssueDetails, detailsProblems, type IssueDetailsValue } from '../../components/IssueDetails';
 import { LinesEditor } from '../../components/LinesEditor';
+import { IssueLinesTable, type LinesContext } from '../../components/IssueLinesTable';
 import { SuccessPanel } from '../../components/SuccessPanel';
 import { useBatches } from '../../hooks/useBatches';
 import { useDebounced } from '../../hooks/useDebounced';
 import { useIssueSave } from '../../hooks/useIssueSave';
 import { useDepartments } from '../../hooks/useLookups';
 import { formatDate, itemLabel } from '../../lib/format';
-import { toRequestLines, totalFor, totalsByUnit, unitKey, type DraftLine } from '../../lib/lines';
+import { removeLine, toRequestLines, totalFor, totalsByUnit, unitKey, type DraftLine } from '../../lib/lines';
 import { qtyWithUnit } from '../../lib/quantity';
 import { reloadStockAndCheck } from '../../lib/stale';
 
@@ -100,10 +101,11 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
               pendingLabel={item.planned ? 'Job pending' : 'Job pending (same group & unit)'}
               pending={pending}
               addedTowardPending={added}
+              context={directContext(content)}
               disabled={locked}
             />
           )}
-          {!item && lines.length > 0 && <LinesOnly lines={lines} />}
+          {!item && lines.length > 0 && <LinesOnly lines={lines} content={content} onLinesChange={setLines} disabled={locked} />}
 
           <section className="panel">
             <div className="details-grid">
@@ -358,11 +360,16 @@ function ItemPicker({ content, selected, onSelect, disabled }: { content: JobCon
   );
 }
 
-function LinesOnly({ lines }: { lines: DraftLine[] }) {
+function directContext(content: JobContent): LinesContext {
+  return { jobCardNo: content.jobContentNo ?? content.jobCardNo, jobName: content.jobName, contentName: content.contentName };
+}
+
+function LinesOnly({ lines, content, onLinesChange, disabled }: { lines: DraftLine[]; content: JobContent; onLinesChange: (lines: DraftLine[]) => void; disabled: boolean }) {
   return (
     <section className="panel">
       <h3>Lines</h3>
-      <p>{lines.length} line(s): {totalsByUnit(lines).map((t) => qtyWithUnit(t.total, t.stockUnit)).join(' + ')}. Pick an item to add more.</p>
+      <IssueLinesTable lines={lines} context={directContext(content)} onRemove={(key) => onLinesChange(removeLine(lines, key))} disabled={disabled} />
+      <p className="muted">{lines.length} line(s): {totalsByUnit(lines).map((t) => qtyWithUnit(t.total, t.stockUnit)).join(' + ')}. Pick an item to add more.</p>
     </section>
   );
 }

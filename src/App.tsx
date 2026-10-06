@@ -5,6 +5,7 @@ import { LoginForm } from './auth/LoginForm';
 import { PicklistTab } from './features/picklist/PicklistTab';
 import { DirectTab } from './features/direct/DirectTab';
 import { HistoryTab } from './features/history/HistoryTab';
+import { ThemeToggle } from './components/ThemeToggle';
 
 type Tab = 'picklist' | 'direct' | 'history';
 
@@ -77,6 +78,7 @@ function Header() {
       {!session.writesEnabled && <span className="badge badge-dry">DRY RUN</span>}
       <span className="spacer" />
       {mockApi && <MockControls />}
+      <ThemeToggle />
       <span className="user">{session.user.userName ?? `User ${session.user.userId}`}</span>
       <button type="button" className="btn btn-small" onClick={() => void logout()}>Sign out</button>
     </header>

@@ -14,7 +14,7 @@
 import { ApiError } from './errors';
 import { getToken, setToken } from '../auth/token';
 import type {
-  Batch, DeleteIssueResponse, Department, FloorWarehouse, HistoryIssue, HistoryLine, HistoryResponse, IssueToolApi,
+  Batch, ClosePicklistLineResponse, DeleteIssueResponse, Department, FloorWarehouse, HistoryIssue, HistoryLine, HistoryResponse, IssueToolApi,
   IssueWarning, Item, ItemBatches, ItemSearchRow, JobContent, LoginRequest, LoginResponse, Page, PicklistLine,
   PicklistQuery, PostIssueRequest, PostIssueResponse, RefreshStockResponse, SessionInfo,
 } from './types';
@@ -55,7 +55,8 @@ function writeFlag(key: string, value: boolean) {
 function item(partial: Partial<Item> & Pick<Item, 'itemId' | 'itemCode' | 'itemGroupId' | 'stockUnit'>): Item {
   return {
     itemName: null, itemGroupName: partial.itemGroupId === 14 ? 'PAPER' : partial.itemGroupId === 2 ? 'REEL' : 'OTHER',
-    quality: null, gsm: null, size: null, manufacturer: null, physicalStock: 0, ...partial,
+    quality: null, gsm: null, size: null, sizeW: null, sizeL: null, manufacturer: null, certification: 'NONE',
+    physicalStock: 0, allocatedStock: 0, ...partial,
   };
 }
 
@@ -84,6 +85,7 @@ interface MockPicklistLine {
   itemId: number;
   required: number;
   departmentId: number;
+  closed?: { date: string; by: string };
 }
 
 interface MockIssuedLine {
@@ -97,15 +99,15 @@ interface MockIssuedLine {
 
 function seed() {
   const items: Item[] = [
-    item({ itemId: 9409, itemCode: 'P02621', itemName: 'SBS BOARD 300GSM 1020X720', itemGroupId: 14, quality: 'SBS', gsm: 300, size: '1020 x 720', manufacturer: 'ITC', stockUnit: 'Sheet' }),
-    item({ itemId: 9410, itemCode: 'P02622', itemName: 'SBS BOARD 300GSM 1020X720', itemGroupId: 14, quality: 'SBS', gsm: 300, size: '1020 x 720', manufacturer: 'Century', stockUnit: 'Sheet' }),
-    item({ itemId: 9101, itemCode: 'R01312', itemName: 'KRAFT REEL 120GSM 1000MM', itemGroupId: 2, quality: 'Kraft', gsm: 120, size: '1000', manufacturer: 'Mill A', stockUnit: 'Kg' }),
-    item({ itemId: 9681, itemCode: 'R01175', itemName: 'KRAFT REEL 120GSM 1000MM', itemGroupId: 2, quality: 'Kraft', gsm: 120, size: '1000', manufacturer: 'Mill B', stockUnit: 'Kg' }),
-    item({ itemId: 9500, itemCode: 'P03010', itemName: 'ART PAPER 130GSM 635X940', itemGroupId: 14, quality: 'Gloss Art', gsm: 130, size: '635 x 940', manufacturer: 'JK', stockUnit: 'KG' }),
+    item({ itemId: 9409, itemCode: 'P02621', itemName: 'SBS BOARD 300GSM 1020X720', itemGroupId: 14, quality: 'SBS', gsm: 300, size: '1020 x 720', sizeW: 1020, sizeL: 720, manufacturer: 'ITC', stockUnit: 'Sheet' }),
+    item({ itemId: 9410, itemCode: 'P02622', itemName: 'SBS BOARD 300GSM 1020X720', itemGroupId: 14, quality: 'SBS', gsm: 300, size: '1020 x 720', sizeW: 1020, sizeL: 720, manufacturer: 'Century', stockUnit: 'Sheet' }),
+    item({ itemId: 9101, itemCode: 'R01312', itemName: 'KRAFT REEL 120GSM 1000MM', itemGroupId: 2, quality: 'Kraft', gsm: 120, size: '1000', sizeW: 1000, sizeL: 0, manufacturer: 'Mill A', stockUnit: 'Kg' }),
+    item({ itemId: 9681, itemCode: 'R01175', itemName: 'KRAFT REEL 120GSM 1000MM', itemGroupId: 2, quality: 'Kraft', gsm: 120, size: '1000', sizeW: 1000, sizeL: 0, manufacturer: 'Mill B', stockUnit: 'Kg' }),
+    item({ itemId: 9500, itemCode: 'P03010', itemName: 'ART PAPER 130GSM 635X940', itemGroupId: 14, quality: 'Gloss Art', gsm: 130, size: '635 x 940', sizeW: 635, sizeL: 940, manufacturer: 'JK', stockUnit: 'KG' }),
   ];
 
   const b = (itemId: number, parent: number, wh: number, whName: string, bin: string, batchNo: string | null, batchId: number, stock: number, grnNo: string | null, grnDate: string | null): MockBatch => ({
-    itemId, batchKey: { parentTransactionId: parent, warehouseId: wh, batchNo }, batchId, batchStock: stock,
+    itemId, batchKey: { parentTransactionId: parent, warehouseId: wh, batchNo }, batchId, supplierBatchNo: null, batchStock: stock,
     grnNo, grnDate, grnVoucherId: grnNo ? -14 : null, warehouseName: whName, binName: bin,
   });
 
@@ -129,6 +131,10 @@ function seed() {
   const picklist: MockPicklistLine[] = [
     { picklistDetailId: 109873, picklistTransactionId: 64534, picklistNo: 'IPIC03454_26_27', picklistDate: '2026-10-01', jobContentId: 24188, itemId: 9409, required: 2958, departmentId: 100 },
   ];
+  picklist.push({
+    picklistDetailId: 109000, picklistTransactionId: 64390, picklistNo: 'IPIC03390_26_27', picklistDate: '2026-09-20', jobContentId: 24188,
+    itemId: 9409, required: 400, departmentId: 100, closed: { date: '2026-09-25T17:05:00', by: 'Admin' },
+  });
   // Filler lines so search and paging have something to do.
   const clients = ['GAMMA PHARMA', 'DELTA FMCG', 'EPSILON BOOKS', 'ZETA COSMETICS'];
   for (let i = 0; i < 64; i++) {
@@ -139,8 +145,8 @@ function seed() {
       contentName: 'Carton', clientName: clients[i % 4]!, departmentId: 100, planned: [{ itemId: i % 2 ? 9410 : 9500, required: 500 + i * 10 }],
     });
     picklist.push({
-      picklistDetailId: 110000 + i, picklistTransactionId: 64600 + Math.floor(i / 3), picklistNo: `IPIC${String(3460 + Math.floor(i / 3)).padStart(5, '0')}_26_27`,
-      picklistDate: addDays('2026-10-01', -Math.floor(i / 4)), jobContentId: contentId, itemId: i % 2 ? 9410 : 9500, required: 500 + i * 10, departmentId: 100,
+      picklistDetailId: 110000 + i, picklistTransactionId: 64400 + Math.floor(i / 3), picklistNo: `IPIC${String(3420 + Math.floor(i / 3)).padStart(5, '0')}_26_27`,
+      picklistDate: addDays('2026-09-09', Math.floor(i / 3)), jobContentId: contentId, itemId: i % 2 ? 9410 : 9500, required: 500 + i * 10, departmentId: 100,
     });
   }
 
@@ -296,16 +302,37 @@ export class MockApi implements IssueToolApi {
         const issued = this.picklistIssued(l);
         return {
           picklistDetailId: l.picklistDetailId, picklistTransactionId: l.picklistTransactionId, picklistNo: l.picklistNo,
-          picklistDate: l.picklistDate, clientName: c.clientName, jobBookingId: c.jobBookingId, jobContentId: c.jobContentId,
+          picklistDate: l.picklistDate, clientName: c.clientName, division: 'Packaging', jobBookingId: c.jobBookingId, jobContentId: c.jobContentId,
           jobCardNo: c.jobCardNo, jobContentNo: c.jobContentNo, jobName: c.jobName, contentName: c.contentName,
           item: this.item(l.itemId), required: l.required, issued, pending: round(l.required - issued),
+          closed: !!l.closed, closedDate: l.closed?.date ?? null, closedBy: l.closed?.by ?? null,
         };
       })
-      .filter((r) => q.showFullyIssued || r.pending > 0)
-      .filter((r) => !s || [r.picklistNo, r.jobCardNo, r.jobContentNo, r.jobName, r.contentName, r.clientName, r.item.itemCode, r.item.itemName]
-        .some((v) => (v ?? '').toLowerCase().includes(s)));
+      .filter((r) => r.closed === q.showClosed)
+      .filter((r) => q.showClosed || q.showFullyIssued || r.pending > 0)
+      .filter((r) => !s || [r.picklistNo, r.jobCardNo, r.jobContentNo, r.jobName, r.contentName, r.clientName, r.division, r.item.itemCode, r.item.itemName]
+        .some((v) => (v ?? '').toLowerCase().includes(s)))
+      // Newest picklist first, as the server orders them.
+      .sort((a, b) => (b.picklistDate ?? '').localeCompare(a.picklistDate ?? '') || b.picklistTransactionId - a.picklistTransactionId || b.picklistDetailId - a.picklistDetailId);
     const start = (q.page - 1) * q.pageSize;
     return { rows: rows.slice(start, start + q.pageSize), page: q.page, pageSize: q.pageSize, total: rows.length };
+  }
+
+  async closePicklistLine(picklistDetailId: number): Promise<ClosePicklistLineResponse> {
+    await this.guard();
+    await this.wait(300);
+    const line = this.data.picklist.find((p) => p.picklistDetailId === picklistDetailId);
+    if (!line) throw new ApiError(400, 'UNKNOWN_PICKLIST_LINE', 'The picklist line does not exist.');
+    if (line.closed) throw new ApiError(409, 'PICKLIST_LINE_CLOSED', 'The picklist line is already closed.');
+    const now = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 19);
+    if (!this.writesEnabled) {
+      return {
+        status: 'DRY_RUN', dryRun: true, dryRunReason: 'WRITES_DISABLED', picklistDetailId, picklistNo: line.picklistNo,
+        wouldWrite: { line: { TransactionDetailID: picklistDetailId, IsCompleted: true, CompletedBy: 24, CompletedDate: now } },
+      };
+    }
+    line.closed = { date: now, by: 'Admin' };
+    return { status: 'CLOSED', dryRun: false, picklistDetailId, picklistNo: line.picklistNo };
   }
 
   async jobContents(search: string): Promise<{ rows: JobContent[] }> {
@@ -417,6 +444,7 @@ export class MockApi implements IssueToolApi {
     if (request.mode === 'ALLOCATED') {
       pickLine = this.data.picklist.find((p) => p.picklistDetailId === request.picklistDetailId);
       if (!pickLine) throw new ApiError(400, 'UNKNOWN_PICKLIST_LINE', 'The picklist line does not exist or has been deleted.');
+      if (pickLine.closed) throw new ApiError(409, 'PICKLIST_LINE_CLOSED', 'The picklist line is closed.');
       const line = pickLine;
       if (request.lines.some((l) => l.itemId !== line.itemId)) {
         throw new ApiError(400, 'ITEM_NOT_ON_PICKLIST', "An allocated issue can only issue the picklist line's item. Use Direct issue for a substitute.");

@@ -73,9 +73,11 @@ It is the only switch between mock and real. Vite inlines it at **build** time, 
 - **Expired session.** A 401 opens a sign-in dialog over the screen. The form underneath stays as it was; after signing in, press Save (or Confirm) again.
 - **Quantities.** Digits and one dot only, more than zero, at most 3 decimals; the field selects all on focus and Enter adds the line. The stock unit sits next to every quantity, and totals never add Kg to Sheet.
 - **Stale stock.** Batch stock reloads when the window regains focus and again right before the confirmation dialog, which warns if a line now takes more than its batch holds.
-- **Later: closing picklist lines.** The picklist table's last column holds row actions and each row carries `picklistDetailId`, so a "Close" button can be added there.
+- **Picklist list.** Newest picklist first, with the ERP picklist screen's columns. **Issue** opens the issue form; **Close** closes the line after a confirmation (a dry run while writes are off), as the ERP's Close does. **Closed allocation picklist** lists the closed lines instead, with when and by whom. Page size 50 / 150 / 500.
+- **Issue form.** Laid out like the ERP's Create Issue screen: voucher no. (given on save) and date, the picklist line, its batches, already issued + quantity + Add, the lines being issued, then floor warehouse, bin and remark.
+- **Light / dark mode.** The header button switches; the choice is remembered in this browser. Until one is chosen, the system setting decides.
 
-Out of scope for now, as agreed: closing picklist lines, the ERP's Picklist Type options, Process and Machine selection, issuing without a job card, printing slips.
+Out of scope for now, as agreed: the ERP's Picklist Type options, Process and Machine selection, issuing without a job card, printing slips.
 
 ## Testing
 

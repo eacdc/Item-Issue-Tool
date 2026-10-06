@@ -7,7 +7,7 @@ import type { Batch } from '../api/types';
 const sheet = { itemId: 9409, itemCode: 'P02621', itemName: 'SBS', itemGroupId: 14, stockUnit: 'Sheet' };
 const kg = { itemId: 9681, itemCode: 'R01175', itemName: 'Reel', itemGroupId: 2, stockUnit: 'Kg' };
 const batch = (parent: number, stock: number, batchNo: string | null = `B${parent}`): Batch => ({
-  batchKey: { parentTransactionId: parent, warehouseId: 17, batchNo }, batchId: parent, batchStock: stock,
+  batchKey: { parentTransactionId: parent, warehouseId: 17, batchNo }, batchId: parent, supplierBatchNo: null, batchStock: stock,
   grnNo: null, grnDate: null, grnVoucherId: null, warehouseName: 'Panchla', binName: 'Rack',
 });
 

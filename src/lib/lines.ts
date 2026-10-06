@@ -9,7 +9,7 @@ import { round3 } from './quantity';
 export interface DraftLine {
   /** Local id for React keys and removal. */
   key: string;
-  item: Pick<Item, 'itemId' | 'itemCode' | 'itemName' | 'itemGroupId' | 'stockUnit'>;
+  item: Pick<Item, 'itemId' | 'itemCode' | 'itemName' | 'itemGroupId' | 'stockUnit'> & Partial<Pick<Item, 'itemGroupName'>>;
   batch: Batch;
   quantity: number;
 }

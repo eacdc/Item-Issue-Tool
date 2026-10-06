@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Batch, Item, ItemBatches } from '../api';
 import { BatchTable } from './BatchTable';
+import { IssueLinesTable, type LinesContext } from './IssueLinesTable';
 import { QtyInput } from './QtyInput';
 import { addLine, remaining, removeLine, takenFromBatch, totalsByUnit, type DraftLine } from '../lib/lines';
 import { formatQty, parseQuantity, qtyWithUnit } from '../lib/quantity';
@@ -15,6 +16,10 @@ interface Props {
   pending: number;
   /** How much of the lines already counts toward `pending`. */
   addedTowardPending: number;
+  /** The job (and picklist) every line goes to, shown on each line. */
+  context: LinesContext;
+  /** Already issued against the picklist line or job, shown next to the quantity as on the ERP screen. */
+  alreadyIssued?: number;
   disabled?: boolean;
 }
 
@@ -22,7 +27,7 @@ interface Props {
  * Pick a batch, type a quantity, Add. Several batches make several lines; the
  * running total is shown against the pending quantity, always with its unit.
  */
-export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel, pending, addedTowardPending, disabled }: Props) {
+export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel, pending, addedTowardPending, context, alreadyIssued, disabled }: Props) {
   const [selected, setSelected] = useState<Batch | null>(null);
   const [qtyText, setQtyText] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -86,8 +91,8 @@ export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel,
       {batches.error && <p className="notice notice-error">{batches.error}</p>}
       {batches.data ? (
         <BatchTable
+          item={batches.data.item.itemId === item.itemId ? { ...item, ...batches.data.item } : item}
           batches={batches.data.batches}
-          unit={unit}
           selected={selected?.batchKey ?? null}
           takenFrom={(key) => takenFromBatch(lines, item.itemId, key)}
           onSelect={choose}
@@ -107,6 +112,12 @@ export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel,
             <span className="muted">Click a batch above to issue from it.</span>
           )}
         </div>
+        {alreadyIssued !== undefined && (
+          <div className="already-issued">
+            <span className="label">Already issued</span>
+            <strong>{qtyWithUnit(alreadyIssued, unit)}</strong>
+          </div>
+        )}
         <QtyInput ref={qtyRef} value={qtyText} onChange={setQtyText} unit={unit} onEnter={add} invalid={!!error} disabled={disabled || !selected} />
         <button type="button" className="btn btn-primary" onClick={add} disabled={disabled || !selected}>
           Add
@@ -115,36 +126,7 @@ export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel,
       {error && <p className="notice notice-error" role="alert">{error}</p>}
 
       {lines.length > 0 && (
-        <div className="table-wrap">
-          <table className="dense">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Item</th>
-                <th>Batch no.</th>
-                <th>Warehouse / bin</th>
-                <th className="num">Quantity</th>
-                <th aria-label="Remove" />
-              </tr>
-            </thead>
-            <tbody>
-              {lines.map((l, i) => (
-                <tr key={l.key}>
-                  <td>{i + 1}</td>
-                  <td>{l.item.itemCode}</td>
-                  <td className="mono">{l.batch.batchKey.batchNo ?? '—'}</td>
-                  <td>{[l.batch.warehouseName, l.batch.binName].filter(Boolean).join(' / ') || '—'}</td>
-                  <td className="num strong">{qtyWithUnit(l.quantity, l.item.stockUnit)}</td>
-                  <td>
-                    <button type="button" className="btn btn-small btn-ghost" onClick={() => onLinesChange(removeLine(lines, l.key))} disabled={disabled}>
-                      Remove
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <IssueLinesTable lines={lines} context={context} onRemove={(key) => onLinesChange(removeLine(lines, key))} disabled={disabled} />
       )}
 
       <div className={`running-total${over ? ' is-over' : addedTowardPending === pending && pending > 0 ? ' is-exact' : ''}`}>

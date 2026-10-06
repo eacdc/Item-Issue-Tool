@@ -39,9 +39,15 @@ export interface Item {
   quality: string | null;
   gsm: number | null;
   size: string | null;
+  sizeW: number | null;
+  sizeL: number | null;
   manufacturer: string | null;
+  /** ItemMaster.CertificationType, e.g. "NONE", "FSC". */
+  certification: string | null;
   stockUnit: string | null;
   physicalStock: number;
+  /** ItemMaster.AllocatedStock. */
+  allocatedStock: number;
 }
 
 export interface PicklistLine {
@@ -50,6 +56,8 @@ export interface PicklistLine {
   picklistNo: string | null;
   picklistDate: string | null;
   clientName: string | null;
+  /** The job's segment, e.g. "Packaging". */
+  division: string | null;
   jobBookingId: number;
   jobContentId: number;
   jobCardNo: string | null;
@@ -60,6 +68,10 @@ export interface PicklistLine {
   required: number;
   issued: number;
   pending: number;
+  closed: boolean;
+  /** IST wall clock, set on closed lines. */
+  closedDate: string | null;
+  closedBy: string | null;
 }
 
 export interface Page<T> {
@@ -74,6 +86,8 @@ export interface PicklistQuery {
   page: number;
   pageSize: number;
   showFullyIssued: boolean;
+  /** Closed lines instead of open ones (the ERP's "Closed Allocation Picklist"). */
+  showClosed: boolean;
 }
 
 export interface PlannedItem extends Item {
@@ -122,6 +136,7 @@ export interface BatchKey {
 export interface Batch {
   batchKey: BatchKey;
   batchId: number | null;
+  supplierBatchNo: string | null;
   batchStock: number;
   grnNo: string | null;
   grnDate: string | null;
@@ -283,6 +298,17 @@ export type DeleteIssueResponse =
       wouldWrite: WouldWrite;
     };
 
+export type ClosePicklistLineResponse =
+  | { status: 'CLOSED'; dryRun: false; picklistDetailId: number; picklistNo: string | null }
+  | {
+      status: 'DRY_RUN';
+      dryRun: true;
+      dryRunReason: DryRunReason;
+      picklistDetailId: number;
+      picklistNo: string | null;
+      wouldWrite: { line: Record<string, unknown> | null };
+    };
+
 export interface RefreshStockResponse {
   ok: true;
   transactionId: number;
@@ -297,6 +323,7 @@ export interface IssueToolApi {
   logout(): Promise<void>;
   session(): Promise<SessionInfo>;
   picklists(query: PicklistQuery): Promise<Page<PicklistLine>>;
+  closePicklistLine(picklistDetailId: number): Promise<ClosePicklistLineResponse>;
   jobContents(search: string): Promise<{ rows: JobContent[] }>;
   items(search: string, jobContentId?: number): Promise<{ rows: ItemSearchRow[] }>;
   batches(itemId: number): Promise<ItemBatches>;

@@ -13,11 +13,13 @@ Before you start:
 Picklist `IPIC03454_26_27`, item P02621 (Sheet), pending 2,958 Sheet. Real data: test A of the backend brief.
 
 - [ ] **Against picklist**: type `IPIC03454`. The line shows Required 2,958 / Issued 0 / Pending 2,958 **Sheet**.
-- [ ] Click the line. The summary shows picklist, client, job content, item, and Required / Issued / Pending, each with **Sheet**.
-- [ ] The batch table shows stock, GRN no. and date, batch no., warehouse and bin, oldest GRN first.
+- [ ] The list is newest picklist first and has the ERP's columns, from Picklist No to Pending Qty, with green **Issue** and red **Close** in the last column.
+- [ ] Click the line. The form shows Voucher No. ("Given on save"), Voucher date, then the picklist line with the ERP's columns: Client, PWO No, Division, item, GSM, SizeW, SizeL, Certification, Physical / Allocated Stock, Required / Issued / Pending Qty.
+- [ ] The batch table has the ERP's columns (item group to bin, including Supplier Batch No), oldest GRN first. Next to the quantity, **Already issued** reads 0 Sheet.
 - [ ] Click batch `60325_…_1.00`. Quantity prefills **2958** and is selected; the unit next to it reads **Sheet**.
 - [ ] Type `1500`, press **Enter**. Line 1 appears; the running total reads 1,500 of 2,958 Sheet, left 1,458.
 - [ ] Click batch `61902_…_2.00`. Quantity prefills **1458**. Press **Add**. Total 2,958, left 0, shown in green.
+- [ ] The lines table shows Picklist No., Job Card No., Job Name, Content Name, item, Unit, Issue Qty, batch, GRN, warehouse, bin and a **Delete** link per line.
 - [ ] Try `0`, `-5`, `abc` in the quantity: letters and minus cannot be typed, zero is refused with a message.
 - [ ] Press Save without a floor warehouse: "Choose the floor warehouse and bin."
 - [ ] Choose **Floor-Panchla / Paper**. Voucher date defaults to today and cannot be set later than today.
@@ -45,7 +47,16 @@ Job content `J06482_26_27[1_1]`, planned R01312 at 68.84 Kg; the storekeeper iss
 - [ ] Tick, press **Issue anyway**. Writes on: a voucher number appears (mock: `IS17256_26_27`). Writes off: the dry-run result, no number. In its rows, the header has JobBookingID **0** and DeliveryNoteNo shows “(rolled back)”, because a blank slip takes the voucher number; the line has the job's JobBookingID and PicklistTransactionID, MachineID, DepartmentID, ProcessID all 0.
 - [ ] Mock only: Mock API → **Fail the stock refresh on the next save**, make another small direct issue. The result says the issue is saved but the stock summary was not updated, and **Retry stock refresh** succeeds.
 
-## 3. History and delete
+## 3. Closing a picklist line
+
+- [ ] On the list, press **Close** on any line. The dialog shows allocated, issued and what stays pending. Writes off: **Close (dry run)** → "tested and rolled back", the line stays. Writes on: **Close line** → the line leaves the list.
+- [ ] Tick **Closed allocation picklist**: closed lines show with the close date and user, without Issue / Close (mock: `IPIC03390_26_27`, plus any you closed).
+
+## 4. Light and dark mode
+
+- [ ] The header's **☾ Dark** button switches every screen (list, form, dialogs, History, sign-in) to dark; **☀ Light** switches back. Reload: the choice is kept.
+
+## 5. History and delete
 
 - [ ] **History** lists today's issues with voucher, type, job content, department, slip, total with unit, and who created them. Issues saved by this tool carry a **tool** badge.
 - [ ] Expand an issue: its lines show item, batch, from-bin, floor bin, picklist and quantity with unit.
@@ -53,7 +64,7 @@ Job content `J06482_26_27[1_1]`, planned R01312 at 68.84 Kg; the storekeeper iss
 - [ ] Each issue has a red **Delete** button next to its voucher number. **Delete** asks for confirmation. Writes off: "Dry run … unchanged", and the issue stays listed. Writes on: "… is deleted" and it leaves the list; in mock mode the batch stock comes back.
 - [ ] An issue whose material has been consumed shows a grey "Consumed" chip instead of Delete (hover it for the reason).
 
-## 4. Against the real backend (dry run)
+## 6. Against the real backend (dry run)
 
 - [ ] `GET /session` reports `writesEnabled: false`: the banner shows, confirm reads "Confirm (dry run)".
 - [ ] Flows 1 and 2 above end in the dry-run result, and the would-be rows match the backend's acceptance test expectations.

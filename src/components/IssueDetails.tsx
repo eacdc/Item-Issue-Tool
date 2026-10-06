@@ -12,10 +12,12 @@ interface Props {
   onChange: (value: IssueDetailsValue) => void;
   today: string;
   disabled?: boolean;
+  /** False when the form shows the voucher date at its top, as the picklist form does. */
+  showDate?: boolean;
 }
 
 /** Floor warehouse + bin (required), voucher date (default today), remark. */
-export function IssueDetails({ value, onChange, today, disabled }: Props) {
+export function IssueDetails({ value, onChange, today, disabled, showDate = true }: Props) {
   const { data: warehouses, error } = useFloorWarehouses();
 
   const selectedWarehouse = useMemo(
@@ -58,16 +60,7 @@ export function IssueDetails({ value, onChange, today, disabled }: Props) {
           ))}
         </select>
       </label>
-      <label>
-        Voucher date
-        <input
-          type="date"
-          value={value.voucherDate}
-          max={today}
-          disabled={disabled}
-          onChange={(e) => onChange({ ...value, voucherDate: e.target.value })}
-        />
-      </label>
+      {showDate && <VoucherDateInput value={value} onChange={onChange} today={today} disabled={disabled} />}
       <label className="span-2">
         Remark
         <input type="text" maxLength={500} value={value.remark} disabled={disabled} onChange={(e) => onChange({ ...value, remark: e.target.value })} />
@@ -93,4 +86,19 @@ export function detailsProblems(value: IssueDetailsValue, today: string): string
   if (!value.voucherDate) problems.push('Enter the voucher date.');
   else if (value.voucherDate > today) problems.push('The voucher date cannot be later than today.');
   return problems;
+}
+
+export function VoucherDateInput({ value, onChange, today, disabled }: Pick<Props, 'value' | 'onChange' | 'today' | 'disabled'>) {
+  return (
+    <label>
+      Voucher date
+      <input
+        type="date"
+        value={value.voucherDate}
+        max={today}
+        disabled={disabled}
+        onChange={(e) => onChange({ ...value, voucherDate: e.target.value })}
+      />
+    </label>
+  );
 }

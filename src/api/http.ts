@@ -5,7 +5,7 @@
 import { ApiError } from './errors';
 import { getToken, setToken } from '../auth/token';
 import type {
-  DeleteIssueResponse, Department, FloorWarehouse, HistoryResponse, IssueToolApi, ItemBatches, ItemSearchRow,
+  ClosePicklistLineResponse, DeleteIssueResponse, Department, FloorWarehouse, HistoryResponse, IssueToolApi, ItemBatches, ItemSearchRow,
   JobContent, LoginRequest, LoginResponse, Page, PicklistLine, PicklistQuery, PostIssueRequest, PostIssueResponse,
   RefreshStockResponse, SessionInfo,
 } from './types';
@@ -92,8 +92,13 @@ export class HttpApi implements IssueToolApi {
       page: String(q.page),
       pageSize: String(q.pageSize),
       showFullyIssued: String(q.showFullyIssued),
+      showClosed: String(q.showClosed),
     });
     return this.tool<Page<PicklistLine>>('GET', `/picklists?${params}`);
+  }
+
+  closePicklistLine(picklistDetailId: number) {
+    return this.tool<ClosePicklistLineResponse>('POST', `/picklists/${picklistDetailId}/close`);
   }
 
   jobContents(search: string) {
