@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, errorMessage, type ItemSearchRow, type JobContent, type PostIssueRequest } from '../../api';
+import { api, errorMessage, type ItemSearchRow, type JobContent, type PlannedItem, type PostIssueRequest } from '../../api';
 import { useSession } from '../../auth/AuthProvider';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { IssueDetails, detailsProblems, type IssueDetailsValue } from '../../components/IssueDetails';
 import { LinesEditor } from '../../components/LinesEditor';
+import { DataGrid, type Column } from '../../components/DataGrid';
+import { itemColumns, qtyColumn, textColumn } from '../../components/columns';
 import { IssueLinesTable, type LinesContext } from '../../components/IssueLinesTable';
 import { SuccessPanel } from '../../components/SuccessPanel';
 import { useBatches } from '../../hooks/useBatches';
@@ -141,6 +143,32 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
   );
 }
 
+const contentColumns: Column<JobContent>[] = [
+  textColumn('contentNo', 'Content No.', (c) => c.jobContentNo, { className: 'mono' }),
+  textColumn('jobName', 'Job Name', (c) => c.jobName),
+  textColumn('contentName', 'Content Name', (c) => c.contentName),
+  textColumn('client', 'Client', (c) => c.clientName),
+  textColumn('planned', 'Planned Items', (c) => c.plannedItems.map((p) => p.itemCode).join(', '), {
+    render: (c) => c.plannedItems.map((p) => p.itemCode).join(', ') || <span className="muted">none</span>,
+  }),
+];
+
+const plannedColumns: Column<PlannedItem>[] = [
+  ...itemColumns<PlannedItem>((p) => p, ['code', 'name', 'group', 'quality', 'gsm', 'sizeW', 'sizeL', 'manufacturer', 'unit']),
+  qtyColumn<PlannedItem>('required', 'Required Qty', (p) => p.required, (p) => p),
+  qtyColumn<PlannedItem>('issued', 'Issued Qty', (p) => p.issued, (p) => p),
+  qtyColumn<PlannedItem>('pending', 'Pending Qty', (p) => p.pending, (p) => p, { className: 'strong' }),
+];
+
+const itemPickerColumns: Column<ItemSearchRow>[] = [
+  textColumn('kind', 'Type', (r) => (r.planned ? 'planned' : 'substitute'), {
+    render: (r) => (r.planned ? <span className="badge">planned</span> : <span className="badge badge-sub">substitute</span>),
+  }),
+  ...itemColumns<ItemSearchRow>((r) => r, ['code', 'name', 'group', 'quality', 'gsm', 'sizeW', 'sizeL', 'manufacturer', 'certification', 'unit']),
+  qtyColumn<ItemSearchRow>('physical', 'Physical Stock', (r) => r.physicalStock, (r) => r),
+  qtyColumn<ItemSearchRow>('jobPending', 'Job Pending', (r) => r.pendingForJob ?? 0, (r) => r),
+];
+
 function JobContentSearch({ onSelect }: { onSelect: (c: JobContent) => void }) {
   const [search, setSearch] = useState('');
   const debounced = useDebounced(search.trim());
@@ -180,35 +208,14 @@ function JobContentSearch({ onSelect }: { onSelect: (c: JobContent) => void }) {
       </div>
       {error && <p className="notice notice-error">{error}</p>}
       {rows && (
-        <div className="table-wrap">
-          <table className="dense clickable">
-            <thead>
-              <tr>
-                <th>Content no.</th>
-                <th>Job</th>
-                <th>Content</th>
-                <th>Client</th>
-                <th>Planned items</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((c) => (
-                <tr key={c.jobContentId} onClick={() => onSelect(c)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onSelect(c)}>
-                  <td className="mono">{c.jobContentNo}</td>
-                  <td>{c.jobName}</td>
-                  <td>{c.contentName}</td>
-                  <td>{c.clientName}</td>
-                  <td>{c.plannedItems.map((p) => p.itemCode).join(', ') || <span className="muted">none</span>}</td>
-                </tr>
-              ))}
-              {!rows.length && (
-                <tr>
-                  <td colSpan={5} className="empty">No job content matches.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataGrid
+          rows={rows}
+          columns={contentColumns}
+          rowKey={(c) => c.jobContentId}
+          onRowClick={onSelect}
+          noun="job content"
+          emptyText="No job content matches."
+        />
       )}
     </section>
   );
@@ -225,31 +232,7 @@ function ContentSummary({ content, onChange, disabled }: { content: JobContent; 
         <span className="muted">{content.clientName}</span>
         <button type="button" className="btn btn-small" onClick={onChange} disabled={disabled}>Change job</button>
       </div>
-      <table className="dense">
-        <thead>
-          <tr>
-            <th>Planned item</th>
-            <th>Quality / GSM / size</th>
-            <th className="num">Required</th>
-            <th className="num">Issued</th>
-            <th className="num">Pending</th>
-          </tr>
-        </thead>
-        <tbody>
-          {content.plannedItems.map((p) => (
-            <tr key={p.itemId}>
-              <td><span className="mono">{p.itemCode}</span> <span className="muted">{p.itemName}</span></td>
-              <td>{[p.quality, p.gsm && `${p.gsm} gsm`, p.size, p.manufacturer].filter(Boolean).join(' · ')}</td>
-              <td className="num">{qtyWithUnit(p.required, p.stockUnit)}</td>
-              <td className="num">{qtyWithUnit(p.issued, p.stockUnit)}</td>
-              <td className="num strong">{qtyWithUnit(p.pending, p.stockUnit)}</td>
-            </tr>
-          ))}
-          {!content.plannedItems.length && (
-            <tr><td colSpan={5} className="empty">No planned material on this content.</td></tr>
-          )}
-        </tbody>
-      </table>
+      <DataGrid rows={content.plannedItems} columns={plannedColumns} rowKey={(p) => p.itemId} noun="planned item" emptyText="No planned material on this content." />
       {content.requirementGroups.some((g) => content.plannedItems.find((p) => p.itemGroupId === g.itemGroupId && unitKey(p.stockUnit) === unitKey(g.stockUnit))?.issued !== g.issued) && (
         <p className="muted">
           Including substitutes already issued, pending is{' '}
@@ -317,45 +300,15 @@ function ItemPicker({ content, selected, onSelect, disabled }: { content: JobCon
         <span className="muted">{loading ? 'Searching…' : ''}</span>
       </div>
       {error && <p className="notice notice-error">{error}</p>}
-      <div className="table-wrap">
-        <table className="dense clickable">
-          <thead>
-            <tr>
-              <th />
-              <th>Code</th>
-              <th>Name</th>
-              <th>Group</th>
-              <th>Quality / GSM / size</th>
-              <th>Mfr.</th>
-              <th className="num">Phys. stock</th>
-              <th className="num">Job pending</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr
-                key={r.itemId}
-                className={selected?.itemId === r.itemId ? 'selected' : undefined}
-                onClick={() => !disabled && onSelect(r)}
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && !disabled && onSelect(r)}
-              >
-                <td>{r.planned ? <span className="badge">planned</span> : <span className="badge badge-sub">substitute</span>}</td>
-                <td className="mono">{r.itemCode}</td>
-                <td>{r.itemName}</td>
-                <td>{r.itemGroupName}</td>
-                <td>{[r.quality, r.gsm && `${r.gsm} gsm`, r.size].filter(Boolean).join(' · ')}</td>
-                <td>{r.manufacturer}</td>
-                <td className="num">{qtyWithUnit(r.physicalStock, r.stockUnit)}</td>
-                <td className="num">{qtyWithUnit(r.pendingForJob ?? 0, r.stockUnit)}</td>
-              </tr>
-            ))}
-            {!rows.length && !loading && (
-              <tr><td colSpan={8} className="empty">{debounced.length >= 2 ? 'No item matches.' : 'No planned items. Search for the item to issue.'}</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid
+        rows={rows}
+        columns={itemPickerColumns}
+        rowKey={(r) => r.itemId}
+        onRowClick={(r) => !disabled && onSelect(r)}
+        rowClassName={(r) => (selected?.itemId === r.itemId ? 'selected' : undefined)}
+        noun="item"
+        emptyText={loading ? 'Searching…' : debounced.length >= 2 ? 'No item matches.' : 'No planned items. Search for the item to issue.'}
+      />
     </section>
   );
 }

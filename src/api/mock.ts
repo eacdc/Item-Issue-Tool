@@ -163,13 +163,54 @@ function seed() {
   return { items, batches, contents, picklist, warehouses, departments };
 }
 
+/**
+ * A few ERP-made issues so History has something to show: Sheet, Kg, Nos and
+ * Roll lines, one without a job (packing material).
+ */
+function sampleHistory(): HistoryIssue[] {
+  const today = todayIst();
+  const it = (partial: Partial<Item> & Pick<Item, 'itemId' | 'itemCode' | 'itemGroupId' | 'stockUnit'>) => item(partial);
+  const issue = (n: number, date: string, dept: string, job: [string, string, string, string] | null, user: string,
+    lines: [Item, number, string | null, string | null][]): HistoryIssue => ({
+    transactionId: 69000 + n, voucherNo: `IS${17400 + n}_26_27`, voucherDate: date, mode: 'DIRECT',
+    jobCardNo: job ? job[0].slice(0, 12) : null, jobContentNo: job?.[0] ?? null, jobName: job?.[1] ?? null, contentName: job?.[2] ?? null,
+    clientName: job?.[3] ?? null, departmentId: dept === 'PRINTING' ? 100 : 103, departmentName: dept, slipNo: `IS${17400 + n}_26_27`,
+    remark: null, totalQuantity: lines.reduce((s, l) => s + l[1], 0), createdBy: { userId: 30 + n, userName: user },
+    createdDate: `${date}T13:${String(10 + n).padStart(2, '0')}:00`, createdByIssueTool: false, canDelete: n % 3 !== 0,
+    deleteBlockedReason: n % 3 === 0 ? 'Material from this issue has been consumed or returned.' : null,
+    lines: lines.map(([i, q, sub, machine], k) => ({
+      transactionDetailId: 119000 + n * 10 + k, transId: k + 1, item: i, stockUnit: i.stockUnit, issueQuantity: q,
+      batchNo: `5${n}000_PO0${n}_26_27_${i.itemId}_${k + 1}.00`, warehouseName: 'Panchla', binName: 'Paper Rack 1',
+      floorWarehouseId: 16, floorWarehouseName: 'Floor-Panchla', floorBinName: 'Paper', picklistTransactionId: null, picklistNo: null,
+      itemSubGroupName: sub, machineId: machine ? 15 : null, machineName: machine, jobContentId: job ? 40000 + n : null,
+      jobContentNo: job?.[0] ?? null, jobName: job?.[1] ?? null, contentName: job?.[2] ?? null, clientName: job?.[3] ?? null,
+    })),
+  });
+  const fbb = it({ itemId: 7340, itemCode: 'P00734', itemName: 'FBB, 250 GSM, ITC, NONE, 585x914', itemGroupId: 14, quality: 'FBB', gsm: 250, size: '585 x 914', sizeW: 585, sizeL: 914, manufacturer: 'ITC', stockUnit: 'Sheet' });
+  const art = it({ itemId: 7008, itemCode: 'P00008', itemName: 'Gloss Art, 90 GSM, Imported, NONE, 635x940', itemGroupId: 14, quality: 'Gloss Art', gsm: 90, size: '635 x 940', sizeW: 635, sizeL: 940, manufacturer: 'Imported', stockUnit: 'Sheet' });
+  const reel = it({ itemId: 7473, itemCode: 'R00473', itemName: 'FBB, 350 GSM, Emami, NONE, 1055', itemGroupId: 2, quality: 'FBB', gsm: 350, size: '1055', sizeW: 1055, sizeL: 0, manufacturer: 'Emami', stockUnit: 'Kg' });
+  const varnish = it({ itemId: 7910, itemCode: 'V00010', itemName: 'UV-CRYSTAL VARNISH', itemGroupId: 9, itemGroupName: 'VARNISHES & COATINGS', stockUnit: 'Kg' });
+  const ink = it({ itemId: 7911, itemCode: 'V00011', itemName: 'Spot, SONAKOTE GREEN 900 GRM', itemGroupId: 9, itemGroupName: 'VARNISHES & COATINGS', stockUnit: 'NOS' });
+  const strap = it({ itemId: 7184, itemCode: 'RM00184', itemName: 'AUTOMATIC STRAPING ROLL', itemGroupId: 11, itemGroupName: 'OTHER MATERIAL', stockUnit: 'Roll' });
+  const tape = it({ itemId: 7188, itemCode: 'RM00188', itemName: 'BROWN TAPE 3 INCH X 650 MTR', itemGroupId: 11, itemGroupName: 'OTHER MATERIAL', stockUnit: 'Nos' });
+  return [
+    issue(9, today, 'PRINTING', ['J07385_26_27[1_1]', 'Specialty Reminder Card', 'Card', 'Eskag Pharma Pvt Ltd'], 'Bikram', [[fbb, 1, null, null]]),
+    issue(8, today, 'PRINTING', ['J07470_26_27[1_2]', 'Folder with Greeting Card', 'Insert 3 kinds Card', 'Eden Realty Ventures'], 'Bikram', [[fbb, 1144, null, null]]),
+    issue(7, today, 'PRINTING', ['J07513_26_27[1_2]', 'GLITZ Magazine - October 2026 Issue', 'Inside', 'The Neptune Glitz'], 'Bikram', [[art, 3000, null, null]]),
+    issue(6, today, 'PRINTING', ['J06440_26_27[1_1]', '175ml Single Box Dot & Key', 'Crash Lock With Pasting', 'RSH Global Private Ltd'], 'Biplab', [[reel, 1233, 'Reel', 'CD102 - 6L']]),
+    issue(5, addDays(today, -1), 'PACKING', null, 'Saugatap', [
+      [varnish, 4, 'VARNISHES & COATINGS', null], [ink, 4, 'VARNISHES & COATINGS', null], [strap, 8, 'Packing Materials', null], [tape, 2, 'Packing Materials', null],
+    ]),
+  ];
+}
+
 // ── The mock ────────────────────────────────────────────────────────────────
 
 export class MockApi implements IssueToolApi {
   readonly isMock = true;
   private data = seed();
   private issued: MockIssuedLine[] = [];
-  private history: HistoryIssue[] = [];
+  private history: HistoryIssue[] = sampleHistory();
   private posted = new Map<string, PostIssueResponse>();
   private inFlight = new Map<string, Promise<PostIssueResponse>>();
   private nextVoucherNo = 17255;
@@ -573,7 +614,7 @@ export class MockApi implements IssueToolApi {
     const dept = this.data.departments.find((d) => d.departmentId === header.DepartmentID);
     this.history.unshift({
       transactionId, voucherNo, voucherDate: request.voucherDate, mode: request.mode, jobCardNo: c.jobCardNo,
-      jobContentNo: c.jobContentNo, jobName: c.jobName, contentName: c.contentName, departmentId: dept?.departmentId ?? null,
+      jobContentNo: c.jobContentNo, jobName: c.jobName, contentName: c.contentName, clientName: c.clientName, departmentId: dept?.departmentId ?? null,
       departmentName: dept?.departmentName ?? null, slipNo: header.DeliveryNoteNo || null, remark: request.remark || null,
       totalQuantity: total, createdBy: { userId: 24, userName: 'STORE1' }, createdDate: new Date().toISOString().slice(0, 19),
       createdByIssueTool: true, canDelete: true, deleteBlockedReason: null,
@@ -584,6 +625,8 @@ export class MockApi implements IssueToolApi {
           issueQuantity: r.IssueQuantity, batchNo: r.BatchNo, warehouseName: b.warehouseName, binName: b.binName,
           floorWarehouseId: request.floorWarehouseId, floorWarehouseName: floor?.warehouseName ?? null, floorBinName: floor?.binName ?? null,
           picklistTransactionId: pickLine?.picklistTransactionId ?? null, picklistNo: pickLine?.picklistNo ?? null,
+          itemSubGroupName: null, machineId: pickLine ? 14 : null, machineName: pickLine ? 'CD102 - 6L' : null,
+          jobContentId: c.jobContentId, jobContentNo: c.jobContentNo, jobName: c.jobName, contentName: c.contentName, clientName: c.clientName,
         };
       }),
     });
@@ -605,7 +648,7 @@ export class MockApi implements IssueToolApi {
   async issues(from?: string, to?: string): Promise<HistoryResponse> {
     await this.guard();
     const end = to ?? todayIst();
-    const start = from ?? addDays(end, -3);
+    const start = from ?? addDays(end, -7);
     return {
       from: start,
       to: end,

@@ -248,6 +248,15 @@ export interface HistoryLine {
   floorBinName: string | null;
   picklistTransactionId: number | null;
   picklistNo: string | null;
+  itemSubGroupName: string | null;
+  machineId: number | null;
+  machineName: string | null;
+  /** The line's own job content (a line can differ from its header). */
+  jobContentId: number | null;
+  jobContentNo: string | null;
+  jobName: string | null;
+  contentName: string | null;
+  clientName: string | null;
 }
 
 export interface HistoryIssue {
@@ -259,6 +268,7 @@ export interface HistoryIssue {
   jobContentNo: string | null;
   jobName: string | null;
   contentName: string | null;
+  clientName: string | null;
   departmentId: number | null;
   departmentName: string | null;
   slipNo: string | null;
@@ -276,6 +286,8 @@ export interface HistoryResponse {
   from: string;
   to: string;
   rows: HistoryIssue[];
+  /** More issues matched than one response carries; narrow the dates. */
+  truncated?: boolean;
 }
 
 export type DeleteIssueResponse =

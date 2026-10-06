@@ -1,7 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { PicklistLine, PostIssueRequest } from '../../api';
 import { useSession } from '../../auth/AuthProvider';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { DataGrid, type Column } from '../../components/DataGrid';
+import { itemColumns, qtyColumn, textColumn } from '../../components/columns';
 import { IssueDetails, VoucherDateInput, detailsProblems, type IssueDetailsValue } from '../../components/IssueDetails';
 import { LinesEditor } from '../../components/LinesEditor';
 import { SuccessPanel } from '../../components/SuccessPanel';
@@ -9,7 +11,7 @@ import { useBatches } from '../../hooks/useBatches';
 import { useIssueSave } from '../../hooks/useIssueSave';
 import { formatDate, itemLabel } from '../../lib/format';
 import { toRequestLines, totalFor, type DraftLine } from '../../lib/lines';
-import { formatQty, qtyWithUnit } from '../../lib/quantity';
+import { qtyWithUnit } from '../../lib/quantity';
 import { reloadStockAndCheck } from '../../lib/stale';
 
 interface Props {
@@ -113,63 +115,23 @@ export function PicklistIssueForm({ line, onBack, onDone }: Props) {
   );
 }
 
-/** The picklist line being issued, with the ERP issue screen's columns. */
+/** The picklist line being issued, with the ERP issue screen's columns. One row, so no filters or totals. */
 function PicklistLineGrid({ line }: { line: PicklistLine }) {
-  const item = line.item;
-  return (
-    <div className="table-wrap">
-      <table className="dense erp-grid">
-        <thead>
-          <tr>
-            <th>Picklist No</th>
-            <th>Client</th>
-            <th>PWO No</th>
-            <th>Division</th>
-            <th>Job Name</th>
-            <th>Content Name</th>
-            <th>Item Code</th>
-            <th>Item Group</th>
-            <th>Quality</th>
-            <th className="num">GSM</th>
-            <th className="num">SizeW</th>
-            <th className="num">SizeL</th>
-            <th>Manufacturer</th>
-            <th>Certification</th>
-            <th>Stock Unit</th>
-            <th className="num">Physical Stock</th>
-            <th className="num">Allocated Stock</th>
-            <th className="num">Required Qty</th>
-            <th className="num">Issued Qty</th>
-            <th className="num">Pending Qty</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="selected">
-            <td className="mono">{line.picklistNo}</td>
-            <td>{line.clientName}</td>
-            <td className="mono">{line.jobContentNo ?? line.jobCardNo}</td>
-            <td>{line.division}</td>
-            <td>{line.jobName}</td>
-            <td>{line.contentName}</td>
-            <td className="mono">{item.itemCode}</td>
-            <td>{item.itemGroupName}</td>
-            <td>{item.quality}</td>
-            <td className="num">{item.gsm ?? ''}</td>
-            <td className="num">{item.sizeW ?? ''}</td>
-            <td className="num">{item.sizeL ?? ''}</td>
-            <td>{item.manufacturer}</td>
-            <td>{item.certification}</td>
-            <td>{item.stockUnit}</td>
-            <td className="num">{formatQty(item.physicalStock)}</td>
-            <td className="num">{formatQty(item.allocatedStock)}</td>
-            <td className="num">{formatQty(line.required)}</td>
-            <td className="num">{formatQty(line.issued)}</td>
-            <td className="num strong">{formatQty(line.pending)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  );
+  const columns = useMemo<Column<PicklistLine>[]>(() => [
+    textColumn<PicklistLine>('picklistNo', 'Picklist No', (l) => l.picklistNo, { className: 'mono' }),
+    textColumn<PicklistLine>('client', 'Client', (l) => l.clientName),
+    textColumn<PicklistLine>('pwo', 'PWO No', (l) => l.jobContentNo ?? l.jobCardNo, { className: 'mono' }),
+    textColumn<PicklistLine>('division', 'Division', (l) => l.division),
+    textColumn<PicklistLine>('jobName', 'Job Name', (l) => l.jobName),
+    textColumn<PicklistLine>('contentName', 'Content Name', (l) => l.contentName),
+    ...itemColumns<PicklistLine>((l) => l.item, ['code', 'group', 'quality', 'gsm', 'sizeW', 'sizeL', 'manufacturer', 'certification', 'unit']),
+    qtyColumn<PicklistLine>('physical', 'Physical Stock', (l) => l.item.physicalStock, (l) => l.item),
+    qtyColumn<PicklistLine>('allocatedStock', 'Allocated Stock', (l) => l.item.allocatedStock, (l) => l.item),
+    qtyColumn<PicklistLine>('required', 'Required Qty', (l) => l.required, (l) => l.item),
+    qtyColumn<PicklistLine>('issued', 'Issued Qty', (l) => l.issued, (l) => l.item),
+    qtyColumn<PicklistLine>('pending', 'Pending Qty', (l) => l.pending, (l) => l.item, { className: 'strong' }),
+  ], []);
+  return <DataGrid rows={[line]} columns={columns} rowKey={(l) => l.picklistDetailId} rowClassName={() => 'selected'} noFilters noSummary />;
 }
 
 function ConfirmSummary({ line, lines, details }: { line: PicklistLine; lines: DraftLine[]; details: IssueDetailsValue }) {

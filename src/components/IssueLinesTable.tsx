@@ -1,6 +1,7 @@
-import { formatDate } from '../lib/format';
-import { formatQty } from '../lib/quantity';
+import { useMemo } from 'react';
 import type { DraftLine } from '../lib/lines';
+import { DataGrid, type Column } from './DataGrid';
+import { dateColumn, itemColumns, qtyColumn, textColumn } from './columns';
 
 /** The job (and picklist) the lines go to, shown on every line as the ERP does. */
 export interface LinesContext {
@@ -20,59 +21,28 @@ interface Props {
 
 /** The lines of the issue being built, with the ERP issue screen's columns. */
 export function IssueLinesTable({ lines, context, onRemove, disabled }: Props) {
-  const withPicklist = context.picklistNo !== undefined;
-  return (
-    <div className="table-wrap">
-      <table className="dense erp-grid">
-        <thead>
-          <tr>
-            {withPicklist && <th>Picklist No.</th>}
-            <th>Job Card No.</th>
-            <th>Job Name</th>
-            <th>Content Name</th>
-            <th>Item Code</th>
-            <th>Item Group</th>
-            <th>Item Name</th>
-            <th>Unit</th>
-            <th className="num">Issue Qty</th>
-            <th>Batch No</th>
-            <th>Supplier Batch No</th>
-            <th>GRN No</th>
-            <th>GRN Date</th>
-            <th>Warehouse</th>
-            <th>Bin</th>
-            {onRemove && <th aria-label="Delete" />}
-          </tr>
-        </thead>
-        <tbody>
-          {lines.map((l) => (
-            <tr key={l.key}>
-              {withPicklist && <td className="mono">{context.picklistNo}</td>}
-              <td className="mono">{context.jobCardNo}</td>
-              <td>{context.jobName}</td>
-              <td>{context.contentName}</td>
-              <td className="mono">{l.item.itemCode}</td>
-              <td>{l.item.itemGroupName}</td>
-              <td>{l.item.itemName}</td>
-              <td>{l.item.stockUnit}</td>
-              <td className="num strong">{formatQty(l.quantity)}</td>
-              <td className="mono">{l.batch.batchKey.batchNo ?? '—'}</td>
-              <td>{l.batch.supplierBatchNo ?? ''}</td>
-              <td>{l.batch.grnNo ?? <span className="muted">opening</span>}</td>
-              <td className="nowrap">{formatDate(l.batch.grnDate)}</td>
-              <td>{l.batch.warehouseName ?? '—'}</td>
-              <td>{l.batch.binName ?? '—'}</td>
-              {onRemove && (
-                <td>
-                  <button type="button" className="btn btn-small btn-ghost link-danger" onClick={() => onRemove(l.key)} disabled={disabled}>
-                    Delete
-                  </button>
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  const columns = useMemo<Column<DraftLine>[]>(() => [
+    ...(context.picklistNo !== undefined ? [textColumn<DraftLine>('picklistNo', 'Picklist No.', () => context.picklistNo, { className: 'mono' })] : []),
+    textColumn<DraftLine>('jobCardNo', 'Job Card No.', () => context.jobCardNo, { className: 'mono' }),
+    textColumn<DraftLine>('jobName', 'Job Name', () => context.jobName),
+    textColumn<DraftLine>('contentName', 'Content Name', () => context.contentName),
+    ...itemColumns<DraftLine>((l) => l.item, ['code', 'group', 'name', 'unit'], { unit: 'Unit' }),
+    qtyColumn<DraftLine>('issueQty', 'Issue Qty', (l) => l.quantity, (l) => l.item, { className: 'strong' }),
+    textColumn<DraftLine>('batchNo', 'Batch No', (l) => l.batch.batchKey.batchNo, { className: 'mono' }),
+    textColumn<DraftLine>('supplierBatchNo', 'Supplier Batch No', (l) => l.batch.supplierBatchNo),
+    textColumn<DraftLine>('grnNo', 'GRN No', (l) => l.batch.grnNo, { render: (l) => l.batch.grnNo ?? <span className="muted">opening</span> }),
+    dateColumn<DraftLine>('grnDate', 'GRN Date', (l) => l.batch.grnDate),
+    textColumn<DraftLine>('warehouse', 'Warehouse', (l) => l.batch.warehouseName),
+    textColumn<DraftLine>('bin', 'Bin', (l) => l.batch.binName),
+    ...(onRemove
+      ? [{
+          id: 'delete', header: '', type: 'text' as const, value: () => null, filterable: false,
+          render: (l: DraftLine) => (
+            <button type="button" className="btn btn-small btn-ghost link-danger" onClick={() => onRemove(l.key)} disabled={disabled}>Delete</button>
+          ),
+        }]
+      : []),
+  ], [context, onRemove, disabled]);
+
+  return <DataGrid rows={lines} columns={columns} rowKey={(l) => l.key} noun="line" />;
 }

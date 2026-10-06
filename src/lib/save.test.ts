@@ -119,7 +119,8 @@ describe('double submit', () => {
     expect(a.result.voucherNo).toBe(b.result.voucherNo);
     expect([a.result.replayed, b.result.replayed].sort()).toEqual([false, true]);
     const history = await api.issues();
-    expect(history.rows).toHaveLength(1);
+    // The mock also carries a few ERP-made sample issues; only one is this tool's.
+    expect(history.rows.filter((r) => r.createdByIssueTool)).toHaveLength(1);
   });
 });
 

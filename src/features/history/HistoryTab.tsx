@@ -1,28 +1,57 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { api, errorMessage, type DeleteIssueResponse, type HistoryIssue } from '../../api';
+import { api, errorMessage, type DeleteIssueResponse, type HistoryIssue, type HistoryLine } from '../../api';
 import { useSession } from '../../auth/AuthProvider';
 import { Modal } from '../../components/Modal';
+import { DataGrid, type Column } from '../../components/DataGrid';
+import { dateColumn, itemColumns, qtyColumn, textColumn } from '../../components/columns';
 import { addDays, formatDate, formatDateTime } from '../../lib/format';
-import { qtyWithUnit } from '../../lib/quantity';
-import { totalsByUnit } from '../../lib/lines';
 
+const PAGE_SIZES = [50, 125, 500, 1000];
+
+/** One row of the issue register: an issue line with its voucher. */
+export interface RegisterRow {
+  key: string;
+  issue: HistoryIssue;
+  line: HistoryLine;
+  /** The picklist for an allocated line; otherwise the voucher number, as the ERP's register shows. */
+  picklistNo: string | null;
+}
+
+/** Pure: one row per line, in the order the issues come. */
+export function registerRows(issues: HistoryIssue[]): RegisterRow[] {
+  return issues.flatMap((issue) =>
+    issue.lines.map((line) => ({
+      key: `${issue.transactionId}-${line.transId}`,
+      issue,
+      line,
+      picklistNo: line.picklistNo ?? issue.voucherNo,
+    })),
+  );
+}
+
+/**
+ * Issue register, laid out like the ERP's: one row per issue line, a filter
+ * on every column, totals at the foot (Kg with sheets weighed, Nos and other
+ * units apart). Delete acts on the whole voucher.
+ */
 export function HistoryTab() {
   const session = useSession();
-  const [from, setFrom] = useState(addDays(session.today, -3));
+  const [from, setFrom] = useState(addDays(session.today, -7));
   const [to, setTo] = useState(session.today);
   const [rows, setRows] = useState<HistoryIssue[] | null>(null);
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<Set<number>>(new Set());
   const [deleting, setDeleting] = useState<HistoryIssue | null>(null);
   const [search, setSearch] = useState('');
-  const shown = useMemo(() => filterIssues(rows ?? [], search), [rows, search]);
+  const register = useMemo(() => registerRows(filterIssues(rows ?? [], search)), [rows, search]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await api.issues(from, to);
       setRows(result.rows);
+      setTruncated(!!result.truncated);
       setError(null);
     } catch (err) {
       setError(errorMessage(err));
@@ -35,12 +64,49 @@ export function HistoryTab() {
     void load();
   }, [load]);
 
-  const toggle = (id: number) => setOpen((s) => {
-    const next = new Set(s);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  });
+  const columns = useMemo<Column<RegisterRow>[]>(() => [
+    ...itemColumns<RegisterRow>((r) => r.line.item, ['group']),
+    textColumn<RegisterRow>('subGroup', 'Sub Group', (r) => r.line.itemSubGroupName, { className: 'clip-sm' }),
+    textColumn<RegisterRow>('issueNo', 'Issue No.', (r) => r.issue.voucherNo, {
+      className: 'mono nowrap',
+      render: (r) => (
+        <>
+          {r.issue.voucherNo}
+          {r.issue.createdByIssueTool && <span className="badge" title="Created by this tool">tool</span>}
+        </>
+      ),
+    }),
+    {
+      id: 'delete', header: 'Delete', type: 'text', value: () => null, filterable: false,
+      render: (r) =>
+        r.issue.canDelete ? (
+          <button type="button" className="btn btn-small btn-danger" onClick={() => setDeleting(r.issue)} disabled={!session.canPost} title={`Delete ${r.issue.voucherNo} (every line)`}>
+            Delete
+          </button>
+        ) : (
+          <span className="chip-muted" title={`Can't delete: ${r.issue.deleteBlockedReason ?? 'consumed'}`}>Consumed</span>
+        ),
+    },
+    dateColumn<RegisterRow>('issueDate', 'Issue Date', (r) => r.issue.voucherDate),
+    ...itemColumns<RegisterRow>((r) => r.line.item, ['code', 'name']),
+    textColumn<RegisterRow>('picklistNo', 'Picklist No.', (r) => r.picklistNo, { className: 'mono nowrap' }),
+    textColumn<RegisterRow>('department', 'Department', (r) => r.issue.departmentName),
+    textColumn<RegisterRow>('jcNo', 'J.C. No.', (r) => r.line.jobContentNo ?? r.issue.jobContentNo, { className: 'mono nowrap' }),
+    textColumn<RegisterRow>('jobName', 'Job Name', (r) => r.line.jobName ?? r.issue.jobName, { className: 'clip' }),
+    textColumn<RegisterRow>('contentName', 'Content Name', (r) => r.line.contentName ?? r.issue.contentName, { className: 'clip' }),
+    textColumn<RegisterRow>('machine', 'Machine Name', (r) => r.line.machineName),
+    qtyColumn<RegisterRow>('issueQty', 'Issue Qty', (r) => r.line.issueQuantity, (r) => ({ ...r.line.item, stockUnit: r.line.stockUnit })),
+    textColumn<RegisterRow>('stockUnit', 'Stock Unit', (r) => r.line.stockUnit),
+    textColumn<RegisterRow>('client', 'Client Name', (r) => r.line.clientName ?? r.issue.clientName, { className: 'clip' }),
+    textColumn<RegisterRow>('createdBy', 'Created By', (r) => r.issue.createdBy.userName ?? String(r.issue.createdBy.userId ?? ''), {
+      render: (r) => <span title={formatDateTime(r.issue.createdDate)}>{r.issue.createdBy.userName ?? r.issue.createdBy.userId}</span>,
+    }),
+    textColumn<RegisterRow>('remark', 'Remark', (r) => r.issue.remark, { className: 'clip' }),
+    textColumn<RegisterRow>('slipNo', 'Slip No.', (r) => r.issue.slipNo, { className: 'mono nowrap' }),
+    textColumn<RegisterRow>('type', 'Type', (r) => (r.issue.mode === 'ALLOCATED' ? 'Picklist' : 'Direct')),
+    textColumn<RegisterRow>('batchNo', 'Batch No', (r) => r.line.batchNo, { className: 'mono nowrap' }),
+    textColumn<RegisterRow>('floor', 'Floor Bin', (r) => [r.line.floorWarehouseName, r.line.floorBinName].filter(Boolean).join(' / ')),
+  ], [session.canPost]);
 
   return (
     <section className="panel">
@@ -55,46 +121,21 @@ export function HistoryTab() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <span className="muted">
-          {rows ? (search.trim() ? `${shown.length} of ${rows.length} issue(s)` : `${rows.length} issue(s)`) : ''}
-        </span>
+        <span className="muted">{rows ? `${rows.length.toLocaleString('en-IN')} issue(s) from ${formatDate(from)} to ${formatDate(to)}` : ''}</span>
       </div>
       {error && <p className="notice notice-error">{error}</p>}
+      {truncated && <p className="notice notice-warn">Only the newest issues of this period are shown. Pick a shorter period to see them all.</p>}
 
-      <div className="table-wrap">
-        <table className="dense">
-          <thead>
-            <tr>
-              <th aria-label="Expand" />
-              <th>Voucher</th>
-              <th>Delete</th>
-              <th>Date</th>
-              <th>Type</th>
-              <th>Job content</th>
-              <th>Job</th>
-              <th>Department</th>
-              <th>Slip No.</th>
-              <th className="num">Total</th>
-              <th>Created by</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((r) => (
-              <HistoryRow
-                key={r.transactionId}
-                issue={r}
-                open={open.has(r.transactionId)}
-                onToggle={() => toggle(r.transactionId)}
-                onDelete={() => setDeleting(r)}
-                canPost={session.canPost}
-              />
-            ))}
-            {rows && !shown.length && (
-              <tr><td colSpan={11} className="empty">{rows.length ? 'No issue matches the search.' : 'No issues in this period.'}</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {rows && (
+        <DataGrid
+          rows={register}
+          columns={columns}
+          rowKey={(r) => r.key}
+          pageSizes={PAGE_SIZES}
+          noun="line"
+          emptyText={rows.length ? 'No issue matches the search.' : 'No issues in this period.'}
+        />
+      )}
 
       {deleting && (
         <DeleteDialog
@@ -107,79 +148,6 @@ export function HistoryTab() {
         />
       )}
     </section>
-  );
-}
-
-function HistoryRow({ issue, open, onToggle, onDelete, canPost }: { issue: HistoryIssue; open: boolean; onToggle: () => void; onDelete: () => void; canPost: boolean }) {
-  const totals = totalsByUnit(issue.lines.map((l) => ({ item: { stockUnit: l.stockUnit }, quantity: l.issueQuantity })));
-  return (
-    <>
-      <tr className={open ? 'expanded' : undefined}>
-        <td>
-          <button type="button" className="btn btn-small btn-ghost" onClick={onToggle} aria-expanded={open} aria-label={open ? 'Hide lines' : 'Show lines'}>
-            {open ? '▾' : '▸'}
-          </button>
-        </td>
-        <td className="mono strong">
-          {issue.voucherNo}
-          {issue.createdByIssueTool && <span className="badge" title="Created by this tool">tool</span>}
-        </td>
-        <td>
-          {issue.canDelete ? (
-            <button type="button" className="btn btn-small btn-danger" onClick={onDelete} disabled={!canPost}>
-              Delete
-            </button>
-          ) : (
-            <span className="chip-muted" title={`Can't delete: ${issue.deleteBlockedReason ?? 'consumed'}`}>Consumed</span>
-          )}
-        </td>
-        <td className="nowrap">{formatDate(issue.voucherDate)}</td>
-        <td>{issue.mode === 'ALLOCATED' ? 'Picklist' : 'Direct'}</td>
-        <td className="mono">{issue.jobContentNo}</td>
-        <td>{issue.jobName}</td>
-        <td>{issue.departmentName}</td>
-        <td className="mono">{issue.slipNo}</td>
-        <td className="num">{totals.map((t) => qtyWithUnit(t.total, t.stockUnit)).join(' + ')}</td>
-        <td>
-          {issue.createdBy.userName ?? issue.createdBy.userId}
-          <div className="muted small">{formatDateTime(issue.createdDate)}</div>
-        </td>
-      </tr>
-      {open && (
-        <tr className="detail-row">
-          <td />
-          <td colSpan={10}>
-            <table className="dense inner">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Item</th>
-                  <th>Batch no.</th>
-                  <th>From</th>
-                  <th>To floor</th>
-                  <th>Picklist</th>
-                  <th className="num">Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {issue.lines.map((l) => (
-                  <tr key={l.transactionDetailId}>
-                    <td>{l.transId}</td>
-                    <td><span className="mono">{l.item.itemCode}</span> <span className="muted">{l.item.itemName}</span></td>
-                    <td className="mono">{l.batchNo}</td>
-                    <td>{[l.warehouseName, l.binName].filter(Boolean).join(' / ')}</td>
-                    <td>{[l.floorWarehouseName, l.floorBinName].filter(Boolean).join(' / ')}</td>
-                    <td className="mono">{l.picklistNo}</td>
-                    <td className="num strong">{qtyWithUnit(l.issueQuantity, l.stockUnit)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {issue.remark && <p className="muted">Remark: {issue.remark}</p>}
-          </td>
-        </tr>
-      )}
-    </>
   );
 }
 
@@ -232,8 +200,8 @@ function DeleteDialog({ issue, writesEnabled, onClose }: { issue: HistoryIssue; 
       {!result && (
         <>
           <p>
-            Delete issue <strong className="mono">{issue.voucherNo}</strong> of {formatDate(issue.voucherDate)} for{' '}
-            <span className="mono">{issue.jobContentNo}</span>? It is marked deleted in the ERP, exactly as the ERP's own delete does,
+            Delete issue <strong className="mono">{issue.voucherNo}</strong> of {formatDate(issue.voucherDate)}
+            {issue.jobContentNo && <> for <span className="mono">{issue.jobContentNo}</span></>}, with all its {issue.lines.length} line(s)? It is marked deleted in the ERP, exactly as the ERP's own delete does,
             and the stock goes back to the batches.
           </p>
           {!writesEnabled && <p className="notice notice-dry">Dry run: the delete will be tested and rolled back. Nothing changes.</p>}

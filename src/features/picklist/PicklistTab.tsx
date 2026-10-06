@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api, errorMessage, type ClosePicklistLineResponse, type Page, type PicklistLine } from '../../api';
 import { useSession } from '../../auth/AuthProvider';
 import { Modal } from '../../components/Modal';
+import { DataGrid, type Column } from '../../components/DataGrid';
+import { itemColumns, qtyColumn, textColumn } from '../../components/columns';
 import { useDebounced } from '../../hooks/useDebounced';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { formatQty, qtyWithUnit } from '../../lib/quantity';
@@ -27,7 +29,9 @@ export function PicklistTab() {
   return <PicklistList onSelect={setSelected} version={listVersion} />;
 }
 
-const PAGE_SIZES = [50, 150, 500];
+const PAGE_SIZES = [50, 150, 500, 1000];
+/** Lines fetched in one go; the grid filters, sorts, totals and pages them in the browser. */
+const FETCH_LIMIT = 5000;
 
 /**
  * Picklist lines, newest picklist first, with the ERP picklist screen's
@@ -39,8 +43,6 @@ function PicklistList({ onSelect, version }: { onSelect: (line: PicklistLine) =>
   const [search, setSearch] = useState('');
   const [showFullyIssued, setShowFullyIssued] = useState(false);
   const [showClosed, setShowClosed] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZES[0]!);
   const [data, setData] = useState<Page<PicklistLine> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,12 +50,10 @@ function PicklistList({ onSelect, version }: { onSelect: (line: PicklistLine) =>
   const [reload, setReload] = useState(0);
   const debounced = useDebounced(search.trim());
 
-  useEffect(() => setPage(1), [debounced, showFullyIssued, showClosed, pageSize]);
-
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    api.picklists({ search: debounced, page, pageSize, showFullyIssued, showClosed }).then(
+    api.picklists({ search: debounced, page: 1, pageSize: FETCH_LIMIT, showFullyIssued, showClosed }).then(
       (result) => {
         if (!alive) return;
         setData(result);
@@ -69,10 +69,50 @@ function PicklistList({ onSelect, version }: { onSelect: (line: PicklistLine) =>
     return () => {
       alive = false;
     };
-  }, [debounced, page, pageSize, showFullyIssued, showClosed, version, reload]);
+  }, [debounced, showFullyIssued, showClosed, version, reload]);
 
-  const pages = data?.total ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
-  const columns = 20;
+  const columns = useMemo<Column<PicklistLine>[]>(() => [
+    textColumn<PicklistLine>('picklistNo', 'Picklist No', (r) => r.picklistNo, {
+      className: 'mono nowrap',
+      render: (r) => <span title={`Picklist date ${formatDate(r.picklistDate)}`}>{r.picklistNo}</span>,
+    }),
+    textColumn<PicklistLine>('client', 'Client', (r) => r.clientName, { className: 'clip' }),
+    textColumn<PicklistLine>('pwo', 'PWO No', (r) => r.jobContentNo ?? r.jobCardNo, { className: 'mono nowrap' }),
+    textColumn<PicklistLine>('jobName', 'Job Name', (r) => r.jobName, { className: 'clip' }),
+    textColumn<PicklistLine>('contentName', 'Content Name', (r) => r.contentName, { className: 'clip' }),
+    ...itemColumns<PicklistLine>((r) => r.item, ['code', 'group']),
+    textColumn<PicklistLine>('division', 'Division', (r) => r.division),
+    ...itemColumns<PicklistLine>((r) => r.item, ['quality', 'gsm', 'sizeW', 'sizeL', 'manufacturer', 'certification', 'unit']),
+    // An item's stock repeats on each of its lines: count it once in the total.
+    qtyColumn<PicklistLine>('physical', 'Physical Stock', (r) => r.item.physicalStock, (r) => r.item, { distinctBy: (r) => r.item.itemId }),
+    qtyColumn<PicklistLine>('allocated', 'Allocated Qty', (r) => r.required, (r) => r.item),
+    qtyColumn<PicklistLine>('issued', 'Issued Qty', (r) => r.issued, (r) => r.item),
+    qtyColumn<PicklistLine>('pending', 'Pending Qty', (r) => r.pending, (r) => r.item, {
+      render: (r) => <span className={`strong${r.pending <= 0 ? ' muted' : ''}`}>{formatQty(r.pending)}</span>,
+    }),
+    showClosed
+      ? {
+          id: 'closed', header: 'Closed', type: 'date', value: (r) => r.closedDate, sticky: true, className: 'nowrap small',
+          render: (r) => <>{formatDateTime(r.closedDate)}{r.closedBy && <span className="muted"> · {r.closedBy}</span>}</>,
+        }
+      : {
+          id: 'actions', header: 'Actions', type: 'text', value: () => null, filterable: false, sticky: true, className: 'actions',
+          render: (r) => (
+            <>
+              <button type="button" className="btn btn-small btn-issue" onClick={(e) => (e.stopPropagation(), onSelect(r))}>Issue</button>{' '}
+              <button
+                type="button"
+                className="btn btn-small btn-close-line"
+                onClick={(e) => (e.stopPropagation(), setClosing(r))}
+                disabled={!session.canPost}
+                title={session.canPost ? 'Close this picklist line' : 'Your login is not linked to an ERP user'}
+              >
+                Close
+              </button>
+            </>
+          ),
+        },
+  ], [showClosed, onSelect, session.canPost]);
 
   return (
     <section className="panel">
@@ -95,116 +135,27 @@ function PicklistList({ onSelect, version }: { onSelect: (line: PicklistLine) =>
             Include fully issued lines
           </label>
         )}
-        <span className="muted">{loading ? 'Loading…' : data?.total !== null && data ? `${data.total} line(s)` : ''}</span>
+        <span className="muted">{loading ? 'Loading…' : ''}</span>
       </div>
 
       {error && <p className="notice notice-error">{error}</p>}
+      {data && data.total !== null && data.total > data.rows.length && (
+        <p className="notice notice-warn">
+          Showing the newest {data.rows.length.toLocaleString('en-IN')} of {data.total.toLocaleString('en-IN')} lines. Type in the search box to narrow them down.
+        </p>
+      )}
 
-      <div className="table-wrap">
-        <table className={`dense erp-grid${showClosed ? '' : ' clickable'}`}>
-          <thead>
-            <tr>
-              <th>Picklist No</th>
-              <th>Client</th>
-              <th>PWO No</th>
-              <th>Job Name</th>
-              <th>Content Name</th>
-              <th>Item Code</th>
-              <th>Item Group</th>
-              <th>Division</th>
-              <th>Quality</th>
-              <th className="num">GSM</th>
-              <th className="num">SizeW</th>
-              <th className="num">SizeL</th>
-              <th>Manufacturer</th>
-              <th>Certification</th>
-              <th>Stock Unit</th>
-              <th className="num">Physical Stock</th>
-              <th className="num">Allocated Qty</th>
-              <th className="num">Issued Qty</th>
-              <th className="num">Pending Qty</th>
-              <th className="sticky-right">{showClosed ? 'Closed' : 'Actions'}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.rows.map((r) => {
-              const open = () => !showClosed && onSelect(r);
-              return (
-                <tr
-                  key={r.picklistDetailId}
-                  onClick={open}
-                  tabIndex={showClosed ? undefined : 0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') open();
-                  }}
-                >
-                  <td className="mono nowrap" title={formatDate(r.picklistDate)}>{r.picklistNo}</td>
-                  <td className="clip" title={r.clientName ?? undefined}>{r.clientName}</td>
-                  <td className="mono nowrap">{r.jobContentNo ?? r.jobCardNo}</td>
-                  <td className="clip" title={r.jobName ?? undefined}>{r.jobName}</td>
-                  <td className="clip" title={r.contentName ?? undefined}>{r.contentName}</td>
-                  <td className="mono">{r.item.itemCode}</td>
-                  <td>{r.item.itemGroupName}</td>
-                  <td>{r.division}</td>
-                  <td>{r.item.quality}</td>
-                  <td className="num">{r.item.gsm ?? ''}</td>
-                  <td className="num">{r.item.sizeW ?? ''}</td>
-                  <td className="num">{r.item.sizeL ?? ''}</td>
-                  <td>{r.item.manufacturer}</td>
-                  <td>{r.item.certification}</td>
-                  <td>{r.item.stockUnit}</td>
-                  <td className="num">{formatQty(r.item.physicalStock)}</td>
-                  <td className="num">{formatQty(r.required)}</td>
-                  <td className="num">{formatQty(r.issued)}</td>
-                  <td className={`num strong${r.pending <= 0 ? ' muted' : ''}`}>{formatQty(r.pending)}</td>
-                  {showClosed ? (
-                    <td className="nowrap small sticky-right">{formatDateTime(r.closedDate)}{r.closedBy && <span className="muted"> · {r.closedBy}</span>}</td>
-                  ) : (
-                    <td className="actions sticky-right">
-                      <button type="button" className="btn btn-small btn-issue" onClick={(e) => (e.stopPropagation(), onSelect(r))}>
-                        Issue
-                      </button>{' '}
-                      <button
-                        type="button"
-                        className="btn btn-small btn-close-line"
-                        onClick={(e) => (e.stopPropagation(), setClosing(r))}
-                        disabled={!session.canPost}
-                        title={session.canPost ? 'Close this picklist line' : 'Your login is not linked to an ERP user'}
-                      >
-                        Close
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-            {data && !data.rows.length && (
-              <tr>
-                <td colSpan={columns} className="empty">{showClosed ? 'No closed picklist lines match.' : 'No open picklist lines match.'}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="pager">
-        <span className="page-sizes">
-          {PAGE_SIZES.map((n) => (
-            <button key={n} type="button" className={`btn btn-small${n === pageSize ? ' active' : ''}`} onClick={() => setPageSize(n)} aria-pressed={n === pageSize}>
-              {n}
-            </button>
-          ))}
-        </span>
-        <button type="button" className="btn" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>
-          ← Previous
-        </button>
-        <span>
-          Page {page} of {pages}
-        </span>
-        <button type="button" className="btn" disabled={page >= pages || loading} onClick={() => setPage((p) => p + 1)}>
-          Next →
-        </button>
-      </div>
+      {data && (
+        <DataGrid
+          rows={data.rows}
+          columns={columns}
+          rowKey={(r) => r.picklistDetailId}
+          onRowClick={showClosed ? undefined : onSelect}
+          pageSizes={PAGE_SIZES}
+          noun="line"
+          emptyText={showClosed ? 'No closed picklist lines match.' : 'No open picklist lines match.'}
+        />
+      )}
 
       {closing && (
         <CloseLineDialog
