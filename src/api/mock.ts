@@ -12,8 +12,6 @@
  */
 
 import { ApiError } from './errors';
-import { issueSlipPdf, type SlipData } from '../lib/slipPdf';
-import logoUrl from '../assets/cdc-logo.jpg';
 import { getToken, setToken } from '../auth/token';
 import type {
   IssueSlipFile,
@@ -750,54 +748,14 @@ export class MockApi implements IssueToolApi {
     return { ok: true, transactionId, mode: 'TRANSACTION', itemIds: [] };
   }
 
-  /** The same slip layout the server draws (src/lib/slipPdf.ts mirrors it). */
+  /** Tests only: a minimal PDF named like the server's. The real slip is drawn by the server. */
   async issueSlip(transactionId: number): Promise<IssueSlipFile> {
     await this.guard();
     const found = this.history.find((h) => h.transactionId === transactionId);
     if (!found) throw new ApiError(404, 'UNKNOWN_ISSUE', 'The issue voucher does not exist.');
-    const first = found.lines.find((l) => l.jobContentNo);
-    const slip: SlipData = {
-      voucherNo: found.voucherNo,
-      voucherDate: found.voucherDate,
-      deleted: false,
-      departmentName: found.departmentName,
-      jobCardNo: found.jobContentNo ?? first?.jobContentNo ?? null,
-      jobName: found.jobName ?? first?.jobName ?? null,
-      clientName: found.clientName ?? first?.clientName ?? null,
-      narration: found.remark,
-      issuedBy: found.createdBy.userName,
-      lines: found.lines.map((l) => ({
-        itemCode: l.item.itemCode,
-        itemName: l.item.itemName,
-        unit: l.stockUnit,
-        quantity: l.issueQuantity,
-        batchNo: l.batchNo,
-        warehouse: l.warehouseName,
-        grnNo: this.data.batches.find((b) => b.itemId === l.item.itemId && b.batchKey.batchNo === l.batchNo)?.grnNo
-          ?? mockGrnNo(l.batchNo),
-        bin: l.binName,
-      })),
-    };
-    const pdf = await issueSlipPdf(slip, await loadLogo());
     return {
-      blob: new Blob([pdf as BlobPart], { type: 'application/pdf' }),
+      blob: new Blob(['%PDF-1.4\n%%EOF\n'], { type: 'application/pdf' }),
       fileName: `${(found.voucherNo ?? `issue-${transactionId}`).replace(/[^A-Za-z0-9_.-]/g, '_')}.pdf`,
     };
-  }
-}
-
-/** Sample history batches aren't in the batch list; make a GRN no. from the batch's receipt id. */
-function mockGrnNo(batchNo: string | null): string | null {
-  const parent = /^(\d+)_/.exec(batchNo ?? '')?.[1];
-  return parent ? `REC0${parent.slice(0, 4)}_26_27` : null;
-}
-
-/** The logo as bytes, or null where it can't be fetched (tests). */
-async function loadLogo(): Promise<ArrayBuffer | null> {
-  try {
-    const response = await fetch(logoUrl);
-    return response.ok ? await response.arrayBuffer() : null;
-  } catch {
-    return null;
   }
 }

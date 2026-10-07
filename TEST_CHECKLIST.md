@@ -1,6 +1,6 @@
 # Test checklist
 
-Run it twice: once in mock mode (`VITE_API_BASE_URL=mock`), then against the real backend while it is still in dry run. In mock mode, turn **Writes enabled** on in the Mock API menu to see real saves, and off to see dry runs.
+Run it against the real backend (the app has no mock mode any more). The server decides whether saves are written or dry-run. Steps marked "Mock only" no longer apply; "(mock: …)" values are examples.
 
 Before you start:
 

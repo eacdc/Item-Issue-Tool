@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { mockApi } from './api';
 import { AuthProvider, useAuth, useSession } from './auth/AuthProvider';
 import { LoginForm } from './auth/LoginForm';
 import { PicklistTab } from './features/picklist/PicklistTab';
@@ -77,52 +76,9 @@ function Header() {
       <span className="site">{session.site === 'KOL' ? 'Kolkata' : 'Ahmedabad'}</span>
       {!session.writesEnabled && <span className="badge badge-dry">DRY RUN</span>}
       <span className="spacer" />
-      {mockApi && <MockControls />}
       <ThemeToggle />
       <span className="user">{session.user.userName ?? `User ${session.user.userId}`}</span>
       <button type="button" className="btn btn-small" onClick={() => void logout()}>Sign out</button>
     </header>
-  );
-}
-
-/** Only in mock mode: switch the server behaviours the UI must handle. */
-function MockControls() {
-  const { refreshSession } = useAuth();
-  const [writes, setWrites] = useState(() => mockApi?.writesEnabled ?? false);
-  const [failRefresh, setFailRefresh] = useState(false);
-  if (!mockApi) return null;
-  const m = mockApi;
-  return (
-    <details className="mock-controls">
-      <summary>Mock API</summary>
-      <div className="mock-menu">
-        <label>
-          <input
-            type="checkbox"
-            checked={writes}
-            onChange={(e) => {
-              m.writesEnabled = e.target.checked;
-              setWrites(e.target.checked);
-              void refreshSession();
-            }}
-          />
-          Writes enabled (off = every save is a dry run)
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={failRefresh}
-            onChange={(e) => {
-              m.failNextStockRefresh = e.target.checked;
-              setFailRefresh(e.target.checked);
-            }}
-          />
-          Fail the stock refresh on the next save
-        </label>
-        <button type="button" className="btn btn-small" onClick={() => m.expireSession()}>
-          Expire session (next call gets 401)
-        </button>
-      </div>
-    </details>
   );
 }

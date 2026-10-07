@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { api, errorMessage, type Site } from '../api';
+import { errorMessage, type Site } from '../api';
 import { useAuth } from './AuthProvider';
 
 const LAST_KEY = 'cdc-issue-tool.last-login';
@@ -49,7 +49,6 @@ export function LoginForm({ relogin = false }: { relogin?: boolean }) {
     <form className="login-card" onSubmit={submit}>
       <h1>{relogin ? 'Session expired' : 'CDC Stock Issue'}</h1>
       {relogin && <p className="muted">Sign in again to continue. Your form is kept: after signing in, press Save again.</p>}
-      {api.isMock && !relogin && <p className="notice notice-info">Mock API: any username works (“nobody” fails).</p>}
       <label>
         Username
         <input

@@ -5,7 +5,7 @@ Storekeepers use this to issue paper and other stock to jobs, against a picklist
 The backend is a module in the `eacdc/CDC-Site` repo (`/api/issue-tool`). This repo is only the web app. Its single source of truth is [`docs/issue-tool-api.md`](docs/issue-tool-api.md), a copy of the backend's contract. When the backend changes the contract, copy the new file here.
 
 - React 19 + Vite + TypeScript, no UI framework.
-- One typed API client (`src/api/http.ts`) and an in-browser mock of the whole contract (`src/api/mock.ts`). Both implement `IssueToolApi` in `src/api/types.ts`; components never call `fetch`.
+- One typed API client (`src/api/http.ts`) talking to the real backend; components never call `fetch`. An in-browser mock of the contract (`src/api/mock.ts`) is used only by the unit tests.
 - Deployed on Render as a static site.
 
 ## Local setup on macOS
@@ -17,17 +17,11 @@ brew install node@22          # or: nvm install 22 && nvm use 22
 git clone https://github.com/eacdc/Item-Issue-Tool.git
 cd Item-Issue-Tool
 npm install
-cp .env.example .env.local    # VITE_API_BASE_URL=mock
+cp .env.example .env.local    # empty = production server
 npm run dev                   # http://localhost:5173
 ```
 
-Sign-in is the same as the production entry tool: your ERP **username** and the **database** (KOL or AHM), no password. In mock mode any username works (`nobody` fails). The header has a **Mock API** menu to:
-
-- turn writes on and off (off = every save is a dry run, as on the real server until writes are enabled);
-- make the next save's stock refresh fail;
-- expire the session, to see the sign-in dialog appear over a half-filled form.
-
-The mock is seeded with the two issues the backend's acceptance tests use: picklist `IPIC03454` (item P02621, Sheet, two batches) and job content `J06482_26_27[1_1]` (planned R01312, substitute R01175, Kg).
+Sign-in is the same as the production entry tool: your ERP **username** and the **database** (KOL or AHM), no password. The app always talks to the real backend; whether saves are written or dry-run is decided by the server (`ISSUE_TOOL_ALLOW_WRITES`).
 
 ### Against the real backend
 
@@ -52,9 +46,9 @@ Restart `npm run dev` after changing it: Vite reads env files at start-up. The b
 
 | Variable | Example | Meaning |
 |---|---|---|
-| `VITE_API_BASE_URL` | `https://cdcapi.onrender.com` | Backend origin, no trailing slash. Empty or `mock` → the built-in mock. |
+| `VITE_API_BASE_URL` | `http://localhost:3001` | Backend origin, no trailing slash. Empty (or the old `mock`) → `https://cdcapi.onrender.com`. |
 
-It is the only switch between mock and real. Vite inlines it at **build** time, so changing it on Render needs a rebuild. Never put secrets in a `VITE_` variable: it ends up in the JavaScript anyone can download.
+It picks which backend the app talks to. Vite inlines it at **build** time, so changing it on Render needs a rebuild. Never put secrets in a `VITE_` variable: it ends up in the JavaScript anyone can download.
 
 ## Deploying on Render
 

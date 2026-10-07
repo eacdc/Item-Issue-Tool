@@ -1,17 +1,21 @@
 /**
- * The one API client the app uses. VITE_API_BASE_URL picks it:
- *   empty or "mock"        → the in-browser mock (src/api/mock.ts)
- *   https://…              → the real backend
+ * The one API client the app uses: always the real backend.
+ *
+ * VITE_API_BASE_URL overrides the server (e.g. http://localhost:3001 for a
+ * backend running on this machine). Empty, unset, or the old "mock" value all
+ * mean the production server. The in-browser mock (src/api/mock.ts) is only
+ * used by the unit tests.
  */
 
 import { HttpApi } from './http';
-import { MockApi } from './mock';
 
-const base = (import.meta.env.VITE_API_BASE_URL ?? '').trim();
+export const DEFAULT_API_BASE_URL = 'https://cdcapi.onrender.com';
 
-export const api: HttpApi | MockApi = base === '' || base.toLowerCase() === 'mock' ? new MockApi() : new HttpApi(base);
+const configured = (import.meta.env.VITE_API_BASE_URL ?? '').trim();
 
-export const mockApi: MockApi | null = api instanceof MockApi ? api : null;
+export const apiBaseUrl = configured === '' || configured.toLowerCase() === 'mock' ? DEFAULT_API_BASE_URL : configured;
+
+export const api = new HttpApi(apiBaseUrl);
 
 export { ApiError, errorMessage } from './errors';
 export type * from './types';

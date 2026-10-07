@@ -271,10 +271,6 @@ ul.notice { padding-left: 28px; }
 .login-card { background: var(--panel); border-radius: 8px; padding: 24px; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 24px var(--shadow); }
 .login-card h1 { color: var(--primary); font-size: 22px; }
 
-.mock-controls { position: relative; }
-.mock-controls summary { cursor: pointer; padding: 6px 10px; border: 1px dashed var(--input-border); border-radius: var(--radius); font-size: 13px; color: var(--muted); }
-.mock-menu { position: absolute; right: 0; top: 110%; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 10px; width: 320px; z-index: 40; box-shadow: 0 6px 20px var(--shadow); }
-.mock-menu label { flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: 14px; }
 
 @media (max-width: 760px) {
   .summary-grid { grid-template-columns: 1fr; }
