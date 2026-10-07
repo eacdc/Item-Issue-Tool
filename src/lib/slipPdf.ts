@@ -26,6 +26,8 @@ export interface SlipData {
   jobName: string | null;
   clientName: string | null;
   narration: string | null;
+  /** The user who made the issue, printed under "Issued By". */
+  issuedBy: string | null;
   lines: SlipLine[];
 }
 
@@ -229,7 +231,12 @@ function drawBottom(page: PDFPage, ctx: Ctx, y: number): number {
   page.drawText(rec, { x: MARGIN + (CONTENT_W - fonts.bold.widthOfTextAtSize(rec, 8.5)) / 2, y: cy, size: 8.5, font: fonts.bold });
   const iss = 'Issued By';
   page.drawText(iss, { x: MARGIN + CONTENT_W - PAD - 4 - fonts.bold.widthOfTextAtSize(iss, 8.5), y: cy, size: 8.5, font: fonts.bold });
-  return cy - 10;
+  const issuer = safe(slip.issuedBy ?? '');
+  if (issuer) {
+    const nameW = fonts.regular.widthOfTextAtSize(issuer, 8.5);
+    page.drawText(issuer, { x: MARGIN + CONTENT_W - PAD - 4 - nameW, y: cy - 11, size: 8.5, font: fonts.regular });
+  }
+  return cy - 21;
 }
 
 function boxOutline(page: PDFPage, top: number, bottom: number) {
@@ -241,7 +248,7 @@ function copyHeight(ctx: Ctx, rows: Cells[]): number {
   const jobExtra = (wrap(slip.jobName, fonts.regular, 8.5, RIGHT_VALUE_W).length - 1) * 10.5;
   const narrLines = Math.max(1, wrap(slip.narration, fonts.regular, 8.5, CONTENT_W - 80).length);
   const tableH = HEAD_H + rows.reduce((s, r) => s + rowHeight(r), 0);
-  return 74 + 74 + jobExtra + 12 + tableH + 22 + 13 + narrLines * 10.5 + 14 + 18;
+  return 74 + 74 + jobExtra + 12 + tableH + 22 + 13 + narrLines * 10.5 + 14 + 29;
 }
 
 function drawCopy(page: PDFPage, ctx: Ctx, rows: Cells[], topY: number) {
@@ -265,7 +272,7 @@ function drawCopyPaged(pdfDoc: PDFDocument, ctx: Ctx, rows: Cells[]) {
     }
     y = drawRow(page, ctx.fonts, y, r);
   }
-  if (y - 90 < MARGIN) {
+  if (y - 100 < MARGIN) {
     boxOutline(page, boxTop, y - 6);
     page = pdfDoc.addPage([PAGE_W, PAGE_H]);
     boxTop = PAGE_H - MARGIN;

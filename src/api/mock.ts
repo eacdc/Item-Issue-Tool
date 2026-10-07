@@ -765,6 +765,7 @@ export class MockApi implements IssueToolApi {
       jobName: found.jobName ?? first?.jobName ?? null,
       clientName: found.clientName ?? first?.clientName ?? null,
       narration: found.remark,
+      issuedBy: found.createdBy.userName,
       lines: found.lines.map((l) => ({
         itemCode: l.item.itemCode,
         itemName: l.item.itemName,
@@ -772,7 +773,8 @@ export class MockApi implements IssueToolApi {
         quantity: l.issueQuantity,
         batchNo: l.batchNo,
         warehouse: l.warehouseName,
-        grnNo: this.data.batches.find((b) => b.itemId === l.item.itemId && b.batchKey.batchNo === l.batchNo)?.grnNo ?? null,
+        grnNo: this.data.batches.find((b) => b.itemId === l.item.itemId && b.batchKey.batchNo === l.batchNo)?.grnNo
+          ?? mockGrnNo(l.batchNo),
         bin: l.binName,
       })),
     };
@@ -782,6 +784,12 @@ export class MockApi implements IssueToolApi {
       fileName: `${(found.voucherNo ?? `issue-${transactionId}`).replace(/[^A-Za-z0-9_.-]/g, '_')}.pdf`,
     };
   }
+}
+
+/** Sample history batches aren't in the batch list; make a GRN no. from the batch's receipt id. */
+function mockGrnNo(batchNo: string | null): string | null {
+  const parent = /^(\d+)_/.exec(batchNo ?? '')?.[1];
+  return parent ? `REC0${parent.slice(0, 4)}_26_27` : null;
 }
 
 /** The logo as bytes, or null where it can't be fetched (tests). */
