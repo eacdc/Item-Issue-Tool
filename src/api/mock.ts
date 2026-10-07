@@ -12,6 +12,8 @@
  */
 
 import { ApiError } from './errors';
+import { issueSlipPdf, type SlipData } from '../lib/slipPdf';
+import logoUrl from '../assets/cdc-logo.jpg';
 import { getToken, setToken } from '../auth/token';
 import type {
   IssueSlipFile,
@@ -748,36 +750,46 @@ export class MockApi implements IssueToolApi {
     return { ok: true, transactionId, mode: 'TRANSACTION', itemIds: [] };
   }
 
-  /** A plain one-page PDF listing the lines; the real slip layout is drawn by the server. */
+  /** The same slip layout the server draws (src/lib/slipPdf.ts mirrors it). */
   async issueSlip(transactionId: number): Promise<IssueSlipFile> {
     await this.guard();
     const found = this.history.find((h) => h.transactionId === transactionId);
     if (!found) throw new ApiError(404, 'UNKNOWN_ISSUE', 'The issue voucher does not exist.');
-    const text = [
-      `Item Issue Slip (mock) ${found.voucherNo ?? ''} ${found.voucherDate ?? ''}`,
-      ...found.lines.map((l) => `${l.item.itemCode ?? ''}  ${l.item.itemName ?? ''}  ${l.issueQuantity} ${l.stockUnit ?? ''}`),
-    ];
-    return { blob: new Blob([simplePdf(text)], { type: 'application/pdf' }), fileName: `${found.voucherNo ?? `issue-${transactionId}`}.pdf` };
+    const first = found.lines.find((l) => l.jobContentNo);
+    const slip: SlipData = {
+      voucherNo: found.voucherNo,
+      voucherDate: found.voucherDate,
+      deleted: false,
+      departmentName: found.departmentName,
+      jobCardNo: found.jobContentNo ?? first?.jobContentNo ?? null,
+      jobName: found.jobName ?? first?.jobName ?? null,
+      clientName: found.clientName ?? first?.clientName ?? null,
+      narration: found.remark,
+      lines: found.lines.map((l) => ({
+        itemCode: l.item.itemCode,
+        itemName: l.item.itemName,
+        unit: l.stockUnit,
+        quantity: l.issueQuantity,
+        batchNo: l.batchNo,
+        warehouse: l.warehouseName,
+        grnNo: this.data.batches.find((b) => b.itemId === l.item.itemId && b.batchKey.batchNo === l.batchNo)?.grnNo ?? null,
+        bin: l.binName,
+      })),
+    };
+    const pdf = await issueSlipPdf(slip, await loadLogo());
+    return {
+      blob: new Blob([pdf as BlobPart], { type: 'application/pdf' }),
+      fileName: `${(found.voucherNo ?? `issue-${transactionId}`).replace(/[^A-Za-z0-9_.-]/g, '_')}.pdf`,
+    };
   }
 }
 
-function simplePdf(lines: string[]): string {
-  const esc = (t: string) => t.replace(/[^\x20-\x7E]/g, '?').replace(/[\\()]/g, (c) => `\\${c}`);
-  const stream = `BT /F1 10 Tf 40 800 Td 14 TL ${lines.map((l) => `(${esc(l)}) '`).join(' ')} ET`;
-  const objects = [
-    '<< /Type /Catalog /Pages 2 0 R >>',
-    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
-    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
-    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-  ];
-  let out = '%PDF-1.4\n';
-  const offsets = objects.map((o, i) => {
-    const at = out.length;
-    out += `${i + 1} 0 obj\n${o}\nendobj\n`;
-    return at;
-  });
-  const xref = out.length;
-  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`;
-  return `${out}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+/** The logo as bytes, or null where it can't be fetched (tests). */
+async function loadLogo(): Promise<ArrayBuffer | null> {
+  try {
+    const response = await fetch(logoUrl);
+    return response.ok ? await response.arrayBuffer() : null;
+  } catch {
+    return null;
+  }
 }

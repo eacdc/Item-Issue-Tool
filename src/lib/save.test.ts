@@ -161,7 +161,7 @@ describe('issue slip (mock)', () => {
     const slip = await api.issueSlip(posted.transactionId);
     expect(slip.fileName).toBe(`${posted.voucherNo}.pdf`);
     expect(slip.blob.type).toBe('application/pdf');
-    expect((await slip.blob.text()).startsWith('%PDF-1.4')).toBe(true);
+    expect((await slip.blob.text()).startsWith('%PDF-')).toBe(true);
     await expect(api.issueSlip(-1)).rejects.toMatchObject({ code: 'UNKNOWN_ISSUE' });
   });
 });

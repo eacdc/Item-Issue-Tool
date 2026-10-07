@@ -98,32 +98,43 @@ export function HistoryTab() {
       ),
     }),
     {
-      id: 'slip', header: 'Slip', type: 'text', value: () => null, filterable: false, width: 4.6,
+      id: 'actions', header: 'Actions', type: 'text', value: () => null, filterable: false, width: 4.4,
       render: (r) => (
-        <button
-          type="button"
-          className="btn btn-small"
-          onClick={(e) => {
-            e.stopPropagation();
-            void downloadSlip(r.issue);
-          }}
-          disabled={slipBusy === r.issue.transactionId}
-          title={`Download the Item Issue Slip of ${r.issue.voucherNo} (PDF)`}
-        >
-          {slipBusy === r.issue.transactionId ? '…' : 'PDF'}
-        </button>
-      ),
-    },
-    {
-      id: 'delete', header: 'Delete', type: 'text', value: () => null, filterable: false, width: 5.8,
-      render: (r) =>
-        r.issue.canDelete ? (
-          <button type="button" className="btn btn-small btn-danger" onClick={() => setDeleting(r.issue)} disabled={!session.canPost} title={`Delete ${r.issue.voucherNo} (every line)`}>
-            Delete
+        <span className="row-actions">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              void downloadSlip(r.issue);
+            }}
+            disabled={slipBusy === r.issue.transactionId}
+            title={`Download the Item Issue Slip of ${r.issue.voucherNo} (PDF)`}
+            aria-label={`Download slip ${r.issue.voucherNo}`}
+          >
+            {slipBusy === r.issue.transactionId ? <span className="icon-spin" /> : <DownloadIcon />}
           </button>
-        ) : (
-          <span className="chip-muted" title={`Can't delete: ${r.issue.deleteBlockedReason ?? 'consumed'}`}>Consumed</span>
-        ),
+          {r.issue.canDelete ? (
+            <button
+              type="button"
+              className="icon-btn icon-btn-danger"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleting(r.issue);
+              }}
+              disabled={!session.canPost}
+              title={`Delete ${r.issue.voucherNo} (every line)`}
+              aria-label={`Delete ${r.issue.voucherNo}`}
+            >
+              <TrashIcon />
+            </button>
+          ) : (
+            <span className="icon-btn icon-btn-locked" title={`Can't delete: ${r.issue.deleteBlockedReason ?? 'already consumed on the floor'}`} aria-label="Consumed, can't delete">
+              <LockIcon />
+            </span>
+          )}
+        </span>
+      ),
     },
     dateColumn<RegisterRow>('issueDate', 'Issue Date', (r) => r.issue.voucherDate),
     ...itemColumns<RegisterRow>((r) => r.line.item, ['code', 'name']),
@@ -276,4 +287,32 @@ export function filterIssues(rows: HistoryIssue[], search: string): HistoryIssue
     ].filter(Boolean).join(' ').toLowerCase();
     return words.every((w) => haystack.includes(w));
   });
+}
+
+const iconProps = { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true } as const;
+
+function DownloadIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+      <path d="M14 3v6h6M12 12v6M9 15l3 3 3-3" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg {...iconProps}>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
 }

@@ -380,3 +380,18 @@ table.erp-grid tr.row-started:hover { background: #b2f0c7; }
 }
 /* The job's planned items in the direct item grid. */
 table.erp-grid tr.row-planned td:first-child { box-shadow: inset 3px 0 0 var(--ok); }
+
+/* Row action icons (History: slip PDF, delete / consumed). */
+.row-actions { display: inline-flex; gap: 2px; align-items: center; vertical-align: middle; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 18px; padding: 0; border: 0; border-radius: 4px;
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.icon-btn:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.icon-btn:disabled { opacity: 0.4; cursor: default; }
+.icon-btn-danger:hover:not(:disabled) { background: var(--error-bg); color: var(--error); }
+.icon-btn-locked { cursor: help; opacity: 0.45; }
+.icon-spin { width: 10px; height: 10px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: icon-spin 0.7s linear infinite; }
+@keyframes icon-spin { to { transform: rotate(360deg); } }
