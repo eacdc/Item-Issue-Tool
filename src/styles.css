@@ -390,3 +390,4 @@ table.erp-grid tr.row-planned td:first-child { box-shadow: inset 3px 0 0 var(--o
 .icon-btn-locked { cursor: help; opacity: 0.45; }
 .icon-spin { width: 10px; height: 10px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: icon-spin 0.7s linear infinite; }
 @keyframes icon-spin { to { transform: rotate(360deg); } }
+.grid-note { margin: 0 0 6px; }

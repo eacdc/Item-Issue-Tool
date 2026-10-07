@@ -10,7 +10,6 @@ import { itemColumns, numberColumn, qtyColumn, textColumn } from '../../componen
 import { IssueLinesTable, type LinesContext } from '../../components/IssueLinesTable';
 import { SuccessPanel } from '../../components/SuccessPanel';
 import { useBatches } from '../../hooks/useBatches';
-import { useDebounced } from '../../hooks/useDebounced';
 import { useIssueSave } from '../../hooks/useIssueSave';
 import { useDepartments, useMachines, useProcesses } from '../../hooks/useLookups';
 import { formatDate, itemLabel } from '../../lib/format';
@@ -213,7 +212,7 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
           <fieldset className="radio-group" disabled={locked}>
             <legend>Picklist Type</legend>
             <label className="inline">
-              <input type="radio" name="scope" checked={scope === 'ALLOCATED'} disabled={noJob} onChange={() => setScope('ALLOCATED')} title="The job's planned items, plus anything you search" /> Job Allocated
+              <input type="radio" name="scope" checked={scope === 'ALLOCATED'} disabled={noJob} onChange={() => setScope('ALLOCATED')} title="The job's planned items" /> Job Allocated
             </label>
             <label className="inline">
               <input type="radio" name="scope" checked={scope === 'ALL'} onChange={() => setScope('ALL')} title="Every item in stock, filterable by column" /> All
@@ -418,13 +417,11 @@ function requiredFor(content: JobContent, item: ItemSearchRow): number | null {
 }
 
 /**
- * The item grid, with the ERP direct screen's columns. The search box is
- * always there: typing finds any item in the item master (code, name, group,
- * quality, GSM, size, mill; every word must match), listed under the job's
- * planned items, so a substitute or extra item is one search away.
- * "Job Allocated" starts from the planned items; "All" (and "Other") starts
- * from every item in stock, so the column filters search the whole list, as
- * in the ERP.
+ * The item grid, with the ERP direct screen's columns, searched by the filter
+ * box under each column header (no separate search field), as in the ERP.
+ * "Job Allocated" lists the job's planned items; "All" (and "Other") lists
+ * every item in stock, the job's planned items first, so any item can be
+ * found with the column filters and issued.
  */
 function DirectItemGrid({ content, noJob, scope, selected, onSelect, refreshKey, inThisIssue, disabled }: {
   content: JobContent | null;
@@ -436,25 +433,22 @@ function DirectItemGrid({ content, noJob, scope, selected, onSelect, refreshKey,
   inThisIssue: (itemId: number) => number;
   disabled: boolean;
 }) {
-  const [search, setSearch] = useState('');
-  const debounced = useDebounced(search.trim());
   const [rows, setRows] = useState<ItemSearchRow[]>([]);
   const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const jobContentId = content?.jobContentId;
   const waitingForJob = !noJob && !content;
-  const allInStock = scope === 'ALL';
-  const term = debounced.length >= 2 ? debounced : '';
+  const allInStock = scope === 'ALL' || noJob;
 
   useEffect(() => {
-    if (waitingForJob || (!jobContentId && !term && !allInStock)) {
+    if (waitingForJob || (!jobContentId && !allInStock)) {
       setRows([]);
       return;
     }
     let alive = true;
     setLoading(true);
-    api.items(term, jobContentId, allInStock).then(
+    api.items('', jobContentId, allInStock).then(
       (r) => {
         if (!alive) return;
         setRows(r.rows);
@@ -467,7 +461,7 @@ function DirectItemGrid({ content, noJob, scope, selected, onSelect, refreshKey,
     return () => {
       alive = false;
     };
-  }, [term, jobContentId, allInStock, waitingForJob, refreshKey]);
+  }, [jobContentId, allInStock, waitingForJob, refreshKey]);
 
   const columns = useMemo<Column<ItemSearchRow>[]>(() => [
     textColumn<ItemSearchRow>('type', 'Type', (r) => (r.planned ? 'Planned' : 'Other'), {
@@ -498,37 +492,17 @@ function DirectItemGrid({ content, noJob, scope, selected, onSelect, refreshKey,
     ? 'Choose a job card first: type it and press Click, or use ⊞ to find it.'
     : loading
       ? 'Loading…'
-      : term
-        ? 'No item matches the search.'
-        : noJob
-          ? 'Type in the search box to find the item.'
-          : 'No planned items on this job card. Type in the search box to find any item.';
+      : allInStock
+        ? 'No item in stock.'
+        : 'No planned items on this job card. Choose "All" in Picklist Type to issue any item in stock.';
 
   return (
     <section className="panel">
-      <div className="toolbar">
-        <input
-          type="search"
-          className="search"
-          placeholder="Search any item: code, name, group, quality, GSM, size, mill… (e.g. fbb 350 emami)"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          disabled={disabled || waitingForJob}
-        />
-        <span className="muted small">
-          {loading
-            ? 'Searching…'
-            : waitingForJob
-              ? ''
-              : allInStock
-                ? 'Every item in stock is listed; narrow it with the search or the column filters.'
-                : term
-                  ? 'Planned items first, then every matching item.'
-                  : 'Planned items of the job. Search to issue any other item (substitute or extra).'}
-        </span>
-      </div>
+      {!waitingForJob && !allInStock && rows.length > 0 && (
+        <p className="muted small grid-note">Planned items of the job. Choose "All" in Picklist Type to issue any other item in stock (substitute or extra).</p>
+      )}
       {error && <p className="notice notice-error">{error}</p>}
-      {truncated && <p className="notice notice-warn">More items match than can be listed. Narrow the search.</p>}
+      {truncated && <p className="notice notice-warn">More items are in stock than can be listed; some are missing from this list.</p>}
       <DataGrid
         rows={rows}
         columns={columns}
