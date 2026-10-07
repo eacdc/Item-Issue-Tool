@@ -196,7 +196,6 @@ table.dense td.empty { text-align: center; color: var(--muted); padding: 20px; }
 table.dense .total-row td { border-top: 2px solid var(--text); font-weight: 600; }
 table.inner { background: var(--subtle); }
 tr.detail-row > td { background: var(--subtle); }
-.rows-dump td { font-size: 12px; }
 
 .pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 10px; }
 

@@ -368,7 +368,7 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
             Slip No.
             <input type="text" maxLength={100} value={slipNo} onChange={(e) => setSlipNo(e.target.value)} disabled={locked} placeholder="Blank: the issue number is used" />
           </label>
-          <label title="Shown as on the ERP screen. The ERP does not save a slip date (DeliveryNoteDate stays empty), so neither does this tool.">
+          <label>
             Slip Date
             <input type="date" value={slipDate} max={session.today} onChange={(e) => setSlipDate(e.target.value)} disabled={locked} />
           </label>
@@ -376,7 +376,6 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
         <IssueDetails value={details} onChange={setDetails} today={session.today} disabled={locked} showDate={false} />
         {problems.length > 0 && <ul className="notice notice-error">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
         <div className="save-row">
-          <span className="muted small">Request {save.requestId.slice(0, 8)}</span>
           <button type="button" className="btn btn-primary btn-large" onClick={onSave} disabled={locked || !session.canPost}>
             {save.busy && !save.confirm ? 'Checking stock…' : 'Save'}
           </button>

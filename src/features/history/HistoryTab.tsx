@@ -88,15 +88,7 @@ export function HistoryTab() {
   const columns = useMemo<Column<RegisterRow>[]>(() => [
     ...itemColumns<RegisterRow>((r) => r.line.item, ['group']),
     textColumn<RegisterRow>('subGroup', 'Sub Group', (r) => r.line.itemSubGroupName, { width: 6 }),
-    textColumn<RegisterRow>('issueNo', 'Issue No.', (r) => r.issue.voucherNo, {
-      className: 'mono', width: 9.5,
-      render: (r) => (
-        <>
-          {r.issue.voucherNo}
-          {r.issue.createdByIssueTool && <span className="badge" title="Created by this tool">tool</span>}
-        </>
-      ),
-    }),
+    textColumn<RegisterRow>('issueNo', 'Issue No.', (r) => r.issue.voucherNo, { className: 'mono', width: 9.5 }),
     {
       id: 'actions', header: 'Actions', type: 'text', value: () => null, filterable: false, width: 4.4,
       render: (r) => (
@@ -248,8 +240,7 @@ function DeleteDialog({ issue, writesEnabled, onClose }: { issue: HistoryIssue; 
         <>
           <p>
             Delete issue <strong className="mono">{issue.voucherNo}</strong> of {formatDate(issue.voucherDate)}
-            {issue.jobContentNo && <> for <span className="mono">{issue.jobContentNo}</span></>}, with all its {issue.lines.length} line(s)? It is marked deleted in the ERP, exactly as the ERP's own delete does,
-            and the stock goes back to the batches.
+            {issue.jobContentNo && <> for <span className="mono">{issue.jobContentNo}</span></>}, with all its {issue.lines.length} line(s)? The stock goes back to the batches.
           </p>
           {!writesEnabled && <p className="notice notice-dry">Dry run: the delete will be tested and rolled back. Nothing changes.</p>}
         </>

@@ -22,7 +22,7 @@ function lastLogin(): { username: string; database: Site } {
 export function LoginForm({ relogin = false }: { relogin?: boolean }) {
   const { login, session } = useAuth();
   const remembered = lastLogin();
-  const [username, setUsername] = useState(relogin ? (session?.user.userName?.replace(/ \(mock\)$/, '') ?? remembered.username) : remembered.username);
+  const [username, setUsername] = useState(relogin ? (session?.user.userName ?? remembered.username) : remembered.username);
   const [database, setDatabase] = useState<Site>(session?.site ?? remembered.database);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

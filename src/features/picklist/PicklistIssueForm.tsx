@@ -60,7 +60,6 @@ export function PicklistIssueForm({ line, onBack, onDone }: Props) {
         <button type="button" className="btn" onClick={onBack} disabled={locked}>
           ← Back to list
         </button>
-        <span className="muted">Request {save.requestId.slice(0, 8)}</span>
       </div>
 
       <section className="panel">

@@ -26,21 +26,9 @@ export function SuccessPanel({ result, onNewIssue }: Props) {
       <section className="result result-dry">
         <h2>Dry run — nothing was saved</h2>
         <p>
-          The server checked this issue, wrote it inside a transaction and rolled it back
-          {result.dryRunReason === 'WRITES_DISABLED' ? ', because saving is not switched on yet' : ''}. No voucher was created and no number was used.
+          Saving is switched off on the server, so this issue was only checked. No voucher was created.
         </p>
         {result.warnings.length > 0 && <p className="muted">{result.warnings.length} warning(s) were acknowledged.</p>}
-        <details>
-          <summary>Rows the server would have written</summary>
-          <RowsTable title="Header (ItemTransactionMain)" rows={result.wouldWrite.header ? [result.wouldWrite.header] : []} voucherNo={result.wouldWrite.header?.VoucherNo} />
-          <RowsTable title="Lines (ItemTransactionDetail)" rows={result.wouldWrite.lines} voucherNo={result.wouldWrite.header?.VoucherNo} />
-          {result.wouldWrite.floorReceipt?.header && (
-            <RowsTable title="Floor receipt (ItemConsumptionMain, RFS)" rows={[result.wouldWrite.floorReceipt.header]} voucherNo={result.wouldWrite.header?.VoucherNo} />
-          )}
-          {!!result.wouldWrite.floorReceipt?.lines.length && (
-            <RowsTable title="Floor receipt lines (ItemConsumptionDetail)" rows={result.wouldWrite.floorReceipt.lines} voucherNo={result.wouldWrite.header?.VoucherNo} />
-          )}
-        </details>
         <button type="button" className="btn btn-primary btn-large" onClick={onNewIssue} autoFocus>
           New issue
         </button>
@@ -78,51 +66,5 @@ export function SuccessPanel({ result, onNewIssue }: Props) {
         New issue
       </button>
     </section>
-  );
-}
-
-/**
- * A dry run's IDs and voucher number were rolled back and will be handed to
- * the next real save, so they are masked rather than shown as if allocated.
- */
-const ROLLED_BACK = new Set([
-  'TransactionID', 'TransactionDetailID', 'MaxVoucherNo', 'VoucherNo',
-  'ConsumptionTransactionID', 'ConsumptionTransactionDetailID', 'IssueTransactionID',
-]);
-
-function cell(column: string, value: unknown, voucherNo: unknown): string {
-  if (ROLLED_BACK.has(column) || (column === 'DeliveryNoteNo' && value && value === voucherNo)) return '(rolled back)';
-  // On the RFS header, ReturnTransactionID carries the rolled-back issue ID.
-  if (column === 'ReturnTransactionID' && typeof value === 'number' && value > 0) return '(rolled back)';
-  return value === null || value === undefined ? 'NULL' : JSON.stringify(value);
-}
-
-function RowsTable({ title, rows, voucherNo }: { title: string; rows: Record<string, unknown>[]; voucherNo: unknown }) {
-  if (!rows.length) return null;
-  const columns = Object.keys(rows[0]!);
-  return (
-    <div className="table-wrap">
-      <h4>{title}</h4>
-      <table className="dense rows-dump">
-        <thead>
-          <tr>
-            <th>Column</th>
-            {rows.map((_, i) => (
-              <th key={i}>{rows.length > 1 ? `Line ${i + 1}` : 'Value'}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {columns.map((c) => (
-            <tr key={c}>
-              <td className="mono">{c}</td>
-              {rows.map((r, i) => (
-                <td key={i} className="mono">{cell(c, r[c], voucherNo)}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
