@@ -44,6 +44,7 @@ export function HistoryTab() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<HistoryIssue | null>(null);
   const [search, setSearch] = useState('');
+  const [slipBusy, setSlipBusy] = useState<number | null>(null);
   const register = useMemo(() => registerRows(filterIssues(rows ?? [], search)), [rows, search]);
 
   const load = useCallback(async () => {
@@ -64,6 +65,26 @@ export function HistoryTab() {
     void load();
   }, [load]);
 
+  const downloadSlip = useCallback(async (issue: HistoryIssue) => {
+    setSlipBusy(issue.transactionId);
+    try {
+      const { blob, fileName } = await api.issueSlip(issue.transactionId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      setError(null);
+    } catch (err) {
+      setError(`Could not download the slip for ${issue.voucherNo}: ${errorMessage(err)}`);
+    } finally {
+      setSlipBusy(null);
+    }
+  }, []);
+
   const columns = useMemo<Column<RegisterRow>[]>(() => [
     ...itemColumns<RegisterRow>((r) => r.line.item, ['group']),
     textColumn<RegisterRow>('subGroup', 'Sub Group', (r) => r.line.itemSubGroupName, { width: 6 }),
@@ -76,6 +97,23 @@ export function HistoryTab() {
         </>
       ),
     }),
+    {
+      id: 'slip', header: 'Slip', type: 'text', value: () => null, filterable: false, width: 4.6,
+      render: (r) => (
+        <button
+          type="button"
+          className="btn btn-small"
+          onClick={(e) => {
+            e.stopPropagation();
+            void downloadSlip(r.issue);
+          }}
+          disabled={slipBusy === r.issue.transactionId}
+          title={`Download the Item Issue Slip of ${r.issue.voucherNo} (PDF)`}
+        >
+          {slipBusy === r.issue.transactionId ? '…' : 'PDF'}
+        </button>
+      ),
+    },
     {
       id: 'delete', header: 'Delete', type: 'text', value: () => null, filterable: false, width: 5.8,
       render: (r) =>
@@ -104,7 +142,7 @@ export function HistoryTab() {
     textColumn<RegisterRow>('remark', 'Remark', (r) => r.issue.remark, { width: 6 }),
     textColumn<RegisterRow>('slipNo', 'Slip No.', (r) => r.issue.slipNo, { className: 'mono', width: 8 }),
     textColumn<RegisterRow>('batchNo', 'Batch No', (r) => r.line.batchNo, { className: 'mono', width: 8.5 }),
-  ], [session.canPost]);
+  ], [session.canPost, downloadSlip, slipBusy]);
 
   return (
     <section className="panel">

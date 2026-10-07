@@ -5,6 +5,7 @@
 import { ApiError } from './errors';
 import { getToken, setToken } from '../auth/token';
 import type {
+  IssueSlipFile,
   ClosePicklistLineResponse, DeleteIssueResponse, Department, FloorWarehouse, HistoryResponse, IssueToolApi, ItemBatches, ItemSearchRow,
   JobContent, JobSearch, LoginRequest, Machine, Process, LoginResponse, Page, PicklistLine, PicklistQuery, PostIssueRequest, PostIssueResponse,
   RefreshStockResponse, SalesPerson, SessionInfo,
@@ -165,5 +166,32 @@ export class HttpApi implements IssueToolApi {
 
   refreshStock(transactionId: number) {
     return this.tool<RefreshStockResponse>('POST', `/issues/${transactionId}/refresh-stock`);
+  }
+
+  /** The Item Issue Slip PDF. Fetched (not linked) because it needs the Authorization header. */
+  async issueSlip(transactionId: number): Promise<IssueSlipFile> {
+    const headers: Record<string, string> = { Accept: 'application/pdf' };
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    let response: Response;
+    try {
+      response = await fetch(`${this.base}/api/issue-tool/issues/${transactionId}/slip`, { headers });
+    } catch {
+      throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the server. Check the connection and try again.');
+    }
+    if (!response.ok) {
+      let payload: { error?: string; code?: string } = {};
+      try {
+        payload = JSON.parse(await response.text());
+      } catch {
+        /* not JSON */
+      }
+      if (response.status === 401) this.onUnauthorized();
+      throw new ApiError(response.status, payload.code ?? `HTTP_${response.status}`,
+        payload.error ?? `The server answered ${response.status}.`);
+    }
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const name = /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? `issue-${transactionId}.pdf`;
+    return { blob: await response.blob(), fileName: name };
   }
 }

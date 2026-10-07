@@ -152,3 +152,16 @@ describe('picklist list and close (mock)', () => {
     await expect(real.closePicklistLine(109873)).rejects.toMatchObject({ code: 'PICKLIST_LINE_CLOSED' });
   });
 });
+
+describe('issue slip (mock)', () => {
+  it('downloads a PDF named after the voucher, and 404s an unknown issue', async () => {
+    const api = await signedInMock(true);
+    const posted = await api.postIssue({ ...testA, requestId: '9a1b2c3d-0000-4000-8000-000000000001' });
+    if (posted.dryRun) throw new Error('expected a real post');
+    const slip = await api.issueSlip(posted.transactionId);
+    expect(slip.fileName).toBe(`${posted.voucherNo}.pdf`);
+    expect(slip.blob.type).toBe('application/pdf');
+    expect((await slip.blob.text()).startsWith('%PDF-1.4')).toBe(true);
+    await expect(api.issueSlip(-1)).rejects.toMatchObject({ code: 'UNKNOWN_ISSUE' });
+  });
+});

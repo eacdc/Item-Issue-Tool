@@ -405,4 +405,11 @@ export interface IssueToolApi {
   issues(from?: string, to?: string): Promise<HistoryResponse>;
   deleteIssue(transactionId: number): Promise<DeleteIssueResponse>;
   refreshStock(transactionId: number): Promise<RefreshStockResponse>;
+  issueSlip(transactionId: number): Promise<IssueSlipFile>;
+}
+
+/** GET /issues/:id/slip — the Item Issue Slip PDF. */
+export interface IssueSlipFile {
+  blob: Blob;
+  fileName: string;
 }
