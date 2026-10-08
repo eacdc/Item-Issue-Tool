@@ -5,6 +5,7 @@ import { Modal } from '../../components/Modal';
 import { DataGrid, type Column } from '../../components/DataGrid';
 import { itemColumns, qtyColumn, textColumn } from '../../components/columns';
 import { useDebounced } from '../../hooks/useDebounced';
+import { useTabRefresh } from '../../hooks/useTabRefresh';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { formatQty, qtyWithUnit } from '../../lib/quantity';
 import { PicklistIssueForm } from './PicklistIssueForm';
@@ -13,6 +14,25 @@ import { PicklistIssueForm } from './PicklistIssueForm';
 export function PicklistTab() {
   const [selected, setSelected] = useState<PicklistLine | null>(null);
   const [listVersion, setListVersion] = useState(0);
+  const refresh = useTabRefresh();
+
+  // Back on this tab with a line open: reload that line (issued / pending) from the server.
+  const selectedId = selected?.picklistDetailId;
+  const selectedNo = selected?.picklistNo;
+  useEffect(() => {
+    if (!refresh || selectedId === undefined) return;
+    let alive = true;
+    api.picklists({ search: selectedNo ?? '', page: 1, pageSize: 1000, showFullyIssued: true, showClosed: true }).then(
+      (r) => {
+        const fresh = r.rows.find((l) => l.picklistDetailId === selectedId);
+        if (alive && fresh) setSelected(fresh);
+      },
+      () => {},
+    );
+    return () => {
+      alive = false;
+    };
+  }, [refresh]);
 
   if (selected) {
     return (
@@ -49,6 +69,7 @@ function PicklistList({ onSelect, version }: { onSelect: (line: PicklistLine) =>
   const [closing, setClosing] = useState<PicklistLine | null>(null);
   const [reload, setReload] = useState(0);
   const debounced = useDebounced(search.trim());
+  const refresh = useTabRefresh();
 
   useEffect(() => {
     let alive = true;
@@ -69,7 +90,7 @@ function PicklistList({ onSelect, version }: { onSelect: (line: PicklistLine) =>
     return () => {
       alive = false;
     };
-  }, [debounced, showFullyIssued, showClosed, version, reload]);
+  }, [debounced, showFullyIssued, showClosed, version, reload, refresh]);
 
   const columns = useMemo<Column<PicklistLine>[]>(() => [
     textColumn<PicklistLine>('picklistNo', 'Picklist No', (r) => r.picklistNo, {

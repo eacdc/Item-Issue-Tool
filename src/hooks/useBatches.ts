@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, errorMessage, type ItemBatches } from '../api';
+import { useTabRefresh } from './useTabRefresh';
 
 /**
- * Batch stock for one item. Reloads when the window regains focus (another
+ * Batch stock for one item. Reloads when its tab is opened again, when the window regains focus (another
  * storekeeper, or the ERP, may have issued from the same batch meanwhile) and
  * on demand, e.g. right before the confirmation dialog.
  */
@@ -37,6 +38,13 @@ export function useBatches(itemId: number | null) {
     setError(null);
     if (itemId !== null) void reload();
   }, [itemId, reload]);
+
+  // Switching back to the tab reloads the stock too.
+  const refresh = useTabRefresh();
+  const firstRefresh = useRef(refresh);
+  useEffect(() => {
+    if (refresh !== firstRefresh.current) void reload();
+  }, [refresh, reload]);
 
   useEffect(() => {
     const onFocus = () => {

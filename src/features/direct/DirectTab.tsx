@@ -10,6 +10,7 @@ import { itemColumns, numberColumn, qtyColumn, textColumn } from '../../componen
 import { IssueLinesTable, type LinesContext } from '../../components/IssueLinesTable';
 import { SuccessPanel } from '../../components/SuccessPanel';
 import { useBatches } from '../../hooks/useBatches';
+import { useTabRefresh } from '../../hooks/useTabRefresh';
 import { useIssueSave } from '../../hooks/useIssueSave';
 import { useDepartments, useMachines, useProcesses } from '../../hooks/useLookups';
 import { formatDate, itemLabel } from '../../lib/format';
@@ -57,6 +58,25 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
   const [problems, setProblems] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const batches = useBatches(item?.itemId ?? null);
+
+  // Back on this tab: reload the chosen job (its issued and pending quantities) from the server, keeping the form.
+  const tabRefresh = useTabRefresh();
+  const contentId = content?.jobContentId;
+  const contentNo = content?.jobContentNo ?? content?.jobCardNo ?? '';
+  useEffect(() => {
+    if (!tabRefresh || contentId === undefined) return;
+    let alive = true;
+    api.jobContents({ search: contentNo, clientName: '', salesPersonId: null, fromDate: null, toDate: null, jobStatus: null }).then(
+      (r) => {
+        const fresh = r.rows.find((x) => x.jobContentId === contentId);
+        if (alive && fresh) setContent(fresh);
+      },
+      () => {},
+    );
+    return () => {
+      alive = false;
+    };
+  }, [tabRefresh]);
 
   const noJob = consumption === 'OTHER';
   const processes = useProcesses(content?.jobContentId ?? null, noJob || !!content);
@@ -331,7 +351,7 @@ function DirectIssueForm({ onNewIssue }: { onNewIssue: () => void }) {
         scope={scope}
         selected={item}
         onSelect={chooseItem}
-        refreshKey={refreshKey}
+        refreshKey={refreshKey + tabRefresh}
         inThisIssue={(itemId) => lines.filter((l) => l.item.itemId === itemId).reduce((s, l) => s + l.quantity, 0)}
         disabled={locked}
       />

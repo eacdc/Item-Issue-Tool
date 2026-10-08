@@ -37,6 +37,7 @@ export class HttpApi implements IssueToolApi {
       response = await fetch(`${this.base}${path}`, {
         method,
         headers,
+        cache: 'no-store',
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch (err) {
@@ -175,7 +176,7 @@ export class HttpApi implements IssueToolApi {
     if (token) headers.Authorization = `Bearer ${token}`;
     let response: Response;
     try {
-      response = await fetch(`${this.base}/api/issue-tool/issues/${transactionId}/slip`, { headers });
+      response = await fetch(`${this.base}/api/issue-tool/issues/${transactionId}/slip`, { headers, cache: 'no-store' });
     } catch {
       throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the server. Check the connection and try again.');
     }

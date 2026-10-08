@@ -5,6 +5,7 @@ import { PicklistTab } from './features/picklist/PicklistTab';
 import { DirectTab } from './features/direct/DirectTab';
 import { HistoryTab } from './features/history/HistoryTab';
 import { ThemeToggle } from './components/ThemeToggle';
+import { TabRefreshContext } from './hooks/useTabRefresh';
 
 type Tab = 'picklist' | 'direct' | 'history';
 
@@ -32,6 +33,12 @@ function Main() {
   const session = useSession();
   // Tabs stay mounted, so switching to History and back keeps a half-filled form.
   const [tab, setTab] = useState<Tab>('picklist');
+  // Each switch to a tab reloads its data from the server (see useTabRefresh).
+  const [visits, setVisits] = useState<Record<Tab, number>>({ picklist: 0, direct: 0, history: 0 });
+  const openTab = (t: Tab) => {
+    setTab(t);
+    if (t !== tab) setVisits((v) => ({ ...v, [t]: v[t] + 1 }));
+  };
   return (
     <div className="app">
       <Header />
@@ -46,13 +53,17 @@ function Main() {
         </div>
       )}
       <nav className="tabs" role="tablist">
-        <TabButton id="picklist" current={tab} onSelect={setTab}>Against picklist</TabButton>
-        <TabButton id="direct" current={tab} onSelect={setTab}>Direct issue</TabButton>
-        <TabButton id="history" current={tab} onSelect={setTab}>History</TabButton>
+        <TabButton id="picklist" current={tab} onSelect={openTab}>Against picklist</TabButton>
+        <TabButton id="direct" current={tab} onSelect={openTab}>Direct issue</TabButton>
+        <TabButton id="history" current={tab} onSelect={openTab}>History</TabButton>
       </nav>
       <main>
-        <div hidden={tab !== 'picklist'}><PicklistTab /></div>
-        <div hidden={tab !== 'direct'}><DirectTab /></div>
+        <TabRefreshContext.Provider value={visits.picklist}>
+          <div hidden={tab !== 'picklist'}><PicklistTab /></div>
+        </TabRefreshContext.Provider>
+        <TabRefreshContext.Provider value={visits.direct}>
+          <div hidden={tab !== 'direct'}><DirectTab /></div>
+        </TabRefreshContext.Provider>
         {tab === 'history' && <HistoryTab />}
       </main>
     </div>
