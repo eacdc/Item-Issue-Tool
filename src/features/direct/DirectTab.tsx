@@ -509,7 +509,8 @@ function DirectItemGrid({ content, noJob, scope, selected, onSelect, refreshKey,
         rowKey={(r) => r.itemId}
         onRowClick={(r) => !disabled && onSelect(r)}
         rowClassName={(r) => [selected?.itemId === r.itemId ? 'selected' : '', r.planned ? 'row-planned' : ''].filter(Boolean).join(' ') || undefined}
-        pageSizes={rows.length > 30 ? [30, 100, 500] : undefined}
+        pageSizes={rows.length > 1000 ? [1000, 5000] : undefined}
+        maxRows={10}
         noun="item"
         emptyText={hint}
       />

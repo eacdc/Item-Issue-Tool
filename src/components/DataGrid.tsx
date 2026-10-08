@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   DATE_OPS, NUMBER_FILTER_HELP, compareValues, emptyFilter, isActive, matches, summarizeQty,
   type ColumnType, type DateOp, type FilterValue, type QtyValue,
@@ -43,6 +43,8 @@ interface Props<T> {
   noSummary?: boolean;
   /** Hide the filter row, for one-row grids. */
   noFilters?: boolean;
+  /** Show at most this many rows; the rest scroll inside the grid, under its fixed header and totals. */
+  maxRows?: number;
 }
 
 type Sort = { id: string; dir: 1 | -1 } | null;
@@ -59,7 +61,7 @@ const DEFAULT_WIDTH: Record<ColumnType, number> = { text: 7, number: 4, qty: 6.8
  * (sheets weighed in; Nos, Ltr, Mtr and other units left out). Filters and
  * totals always cover every matching row, not just the page.
  */
-export function DataGrid<T>({ rows, columns, rowKey, onRowClick, rowClassName, pageSizes, emptyText, noun = 'row', noSummary, noFilters }: Props<T>) {
+export function DataGrid<T>({ rows, columns, rowKey, onRowClick, rowClassName, pageSizes, emptyText, noun = 'row', noSummary, noFilters, maxRows }: Props<T>) {
   const [filters, setFilters] = useState<Record<string, FilterValue>>({});
   const [sort, setSort] = useState<Sort>(null);
   const [pageSize, setPageSize] = useState(pageSizes?.[0] ?? Infinity);
@@ -87,6 +89,16 @@ export function DataGrid<T>({ rows, columns, rowKey, onRowClick, rowClassName, p
     return w.map((x) => `${((x / total) * 100).toFixed(3)}%`);
   }, [columns]);
 
+  // maxRows: the scroll box is as tall as the header, maxRows body rows and the totals.
+  const tableRef = useRef<HTMLTableElement>(null);
+  const [maxHeight, setMaxHeight] = useState<number | undefined>(undefined);
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!maxRows || !table) return;
+    const rowH = table.tBodies[0]?.rows[0]?.offsetHeight || 20;
+    setMaxHeight((table.tHead?.offsetHeight ?? 0) + rowH * maxRows + (table.tFoot?.offsetHeight ?? 0) + 1);
+  }, [maxRows, shown.length, columns, noSummary, noFilters]);
+
   const setFilter = (id: string, f: FilterValue) => setFilters((s) => ({ ...s, [id]: f }));
   const toggleSort = (id: string) =>
     setSort((s) => (s?.id !== id ? { id, dir: 1 } : s.dir === 1 ? { id, dir: -1 } : null));
@@ -99,97 +111,99 @@ export function DataGrid<T>({ rows, columns, rowKey, onRowClick, rowClassName, p
           <button type="button" className="btn btn-small btn-ghost link" onClick={() => setFilters({})}>Clear filters</button>
         </div>
       )}
-      <table className={`erp-grid${onRowClick ? ' clickable' : ''}`}>
-        <colgroup>
-          {columns.map((c, i) => <col key={c.id} style={{ width: widths[i] }} />)}
-        </colgroup>
-        <thead>
-          <tr>
-            {columns.map((c) => {
-              const sortable = c.filterable !== false;
-              const dir = sort?.id === c.id ? sort.dir : 0;
-              return (
-                <th
-                  key={c.id}
-                  className={[isNumeric(c.type) ? 'num' : '', sortable ? 'sortable' : ''].join(' ').trim() || undefined}
-                  onClick={sortable ? () => toggleSort(c.id) : undefined}
-                  aria-sort={dir === 1 ? 'ascending' : dir === -1 ? 'descending' : undefined}
-                  title={sortable ? `${c.header}: click to sort` : c.header}
-                >
-                  {c.header}
-                  {dir !== 0 && <span className="sort-mark">{dir === 1 ? ' ▲' : ' ▼'}</span>}
-                </th>
-              );
-            })}
-          </tr>
-          {!noFilters && (
-            <tr className="filter-row">
-              {columns.map((c) => (
-                <th key={c.id}>
-                  {c.filterable !== false && (
-                    <FilterInput type={c.type} header={c.header} value={filters[c.id] ?? emptyFilter(c.type)} onChange={(f) => setFilter(c.id, f)} />
-                  )}
-                </th>
-              ))}
-            </tr>
-          )}
-        </thead>
-        <tbody>
-          {shown.map((r) => (
-            <tr
-              key={rowKey(r)}
-              className={rowClassName?.(r)}
-              onClick={onRowClick ? () => onRowClick(r) : undefined}
-              tabIndex={onRowClick ? 0 : undefined}
-              onKeyDown={
-                onRowClick
-                  ? (e) => {
-                      if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
-                        e.preventDefault();
-                        onRowClick(r);
-                      }
-                    }
-                  : undefined
-              }
-            >
-              {columns.map((c) => (
-                <td
-                  key={c.id}
-                  className={[c.className, isNumeric(c.type) ? 'num' : ''].filter(Boolean).join(' ') || undefined}
-                  title={hoverText(c, r)}
-                >
-                  {c.render ? c.render(r) : defaultCell(c, r)}
-                </td>
-              ))}
-            </tr>
-          ))}
-          {!shown.length && (
+      <div className={maxRows ? 'grid-scroll' : undefined} style={maxRows ? { maxHeight } : undefined}>
+        <table ref={tableRef} className={`erp-grid${onRowClick ? ' clickable' : ''}`}>
+          <colgroup>
+            {columns.map((c, i) => <col key={c.id} style={{ width: widths[i] }} />)}
+          </colgroup>
+          <thead>
             <tr>
-              <td colSpan={columns.length} className="empty">
-                {rows.length && anyFilter ? 'No row matches the filters.' : emptyText ?? 'Nothing to show.'}
-              </td>
+              {columns.map((c) => {
+                const sortable = c.filterable !== false;
+                const dir = sort?.id === c.id ? sort.dir : 0;
+                return (
+                  <th
+                    key={c.id}
+                    className={[isNumeric(c.type) ? 'num' : '', sortable ? 'sortable' : ''].join(' ').trim() || undefined}
+                    onClick={sortable ? () => toggleSort(c.id) : undefined}
+                    aria-sort={dir === 1 ? 'ascending' : dir === -1 ? 'descending' : undefined}
+                    title={sortable ? `${c.header}: click to sort` : c.header}
+                  >
+                    {c.header}
+                    {dir !== 0 && <span className="sort-mark">{dir === 1 ? ' ▲' : ' ▼'}</span>}
+                  </th>
+                );
+              })}
             </tr>
-          )}
-        </tbody>
-        {!noSummary && filtered.length > 0 && (
-          <tfoot>
-            <tr className="summary-row">
-              {columns.map((c, i) => (
-                <td key={c.id} className={isNumeric(c.type) ? 'num' : undefined}>
-                  {i === 0 ? (
-                    <span className="summary-count">
-                      {filtered.length.toLocaleString('en-IN')} {filtered.length === 1 ? noun : plural(noun)}
-                      {anyFilter && <span className="muted"> of {rows.length.toLocaleString('en-IN')}</span>}
-                    </span>
-                  ) : (
-                    <ColumnSummary column={c} rows={filtered} />
-                  )}
+            {!noFilters && (
+              <tr className="filter-row">
+                {columns.map((c) => (
+                  <th key={c.id}>
+                    {c.filterable !== false && (
+                      <FilterInput type={c.type} header={c.header} value={filters[c.id] ?? emptyFilter(c.type)} onChange={(f) => setFilter(c.id, f)} />
+                    )}
+                  </th>
+                ))}
+              </tr>
+            )}
+          </thead>
+          <tbody>
+            {shown.map((r) => (
+              <tr
+                key={rowKey(r)}
+                className={rowClassName?.(r)}
+                onClick={onRowClick ? () => onRowClick(r) : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
+                          e.preventDefault();
+                          onRowClick(r);
+                        }
+                      }
+                    : undefined
+                }
+              >
+                {columns.map((c) => (
+                  <td
+                    key={c.id}
+                    className={[c.className, isNumeric(c.type) ? 'num' : ''].filter(Boolean).join(' ') || undefined}
+                    title={hoverText(c, r)}
+                  >
+                    {c.render ? c.render(r) : defaultCell(c, r)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {!shown.length && (
+              <tr>
+                <td colSpan={columns.length} className="empty">
+                  {rows.length && anyFilter ? 'No row matches the filters.' : emptyText ?? 'Nothing to show.'}
                 </td>
-              ))}
-            </tr>
-          </tfoot>
-        )}
-      </table>
+              </tr>
+            )}
+          </tbody>
+          {!noSummary && filtered.length > 0 && (
+            <tfoot>
+              <tr className="summary-row">
+                {columns.map((c, i) => (
+                  <td key={c.id} className={isNumeric(c.type) ? 'num' : undefined}>
+                    {i === 0 ? (
+                      <span className="summary-count">
+                        {filtered.length.toLocaleString('en-IN')} {filtered.length === 1 ? noun : plural(noun)}
+                        {anyFilter && <span className="muted"> of {rows.length.toLocaleString('en-IN')}</span>}
+                      </span>
+                    ) : (
+                      <ColumnSummary column={c} rows={filtered} />
+                    )}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
 
       {pageSizes && (
         <div className="pager">
