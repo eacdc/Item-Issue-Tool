@@ -5,8 +5,8 @@ import { qtyWithUnit } from './quantity';
 /**
  * Reload batch stock for every item in the form right before the confirmation
  * dialog, and describe any line that now takes more than its batch holds.
- * The server re-checks at save time and warns anyway; this tells the user
- * before they press Confirm.
+ * The server re-checks at save time and refuses such an issue; this tells
+ * the user before they press Confirm.
  */
 export async function reloadStockAndCheck(lines: DraftLine[], reloadShown: () => Promise<unknown>): Promise<string | null> {
   const itemIds = [...new Set(lines.map((l) => l.item.itemId))];
@@ -21,5 +21,5 @@ export async function reloadStockAndCheck(lines: DraftLine[], reloadShown: () =>
       return `${l.batch.batchKey.batchNo ?? '(no batch no.)'} now holds ${qtyWithUnit(now?.batchStock ?? 0, l.item.stockUnit)}`;
     })
     .join('; ');
-  return `Stock was reloaded just now and has changed: ${list}. Saving will drive the batch negative.`;
+  return `Stock was reloaded just now and has changed: ${list}. A batch cannot give more than it holds: go back, delete those lines and issue them again within the batch stock, taking the rest from another batch.`;
 }

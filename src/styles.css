@@ -237,7 +237,6 @@ ul.notice { padding-left: 28px; }
 .warnings { margin-top: 12px; padding: 12px; border: 2px solid var(--warn-strong); border-radius: var(--radius); background: var(--warn-bg); }
 .warnings ul { margin: 0 0 10px; padding-left: 20px; }
 .warnings li { margin-bottom: 6px; }
-.warning-strong { font-weight: 700; color: var(--warn-strong); }
 .warning-code { display: inline-block; font-size: 11px; text-transform: uppercase; background: var(--panel); border: 1px solid var(--warn); border-radius: 4px; padding: 0 6px; margin-right: 6px; }
 .ack { font-weight: 600; }
 

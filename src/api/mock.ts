@@ -599,8 +599,8 @@ export class MockApi implements IssueToolApi {
     for (const [b, e] of perBatch) {
       if (e.qty > b.batchStock) {
         const unit = this.item(b.itemId).stockUnit;
-        warnings.push({ code: 'OVER_BATCH_STOCK', lineNo: e.first, itemId: b.itemId, quantity: e.qty, limit: round(b.batchStock), stockUnit: unit,
-          message: `Line ${e.first} takes ${e.qty} ${unit} from batch ${b.batchKey.batchNo ?? '(no batch no.)'}, which holds only ${round(b.batchStock)} ${unit}. This drives the batch negative, and a negative batch silently drops out of physical stock. Check the batch and the quantity before you continue.` });
+        throw new ApiError(409, 'OVER_BATCH_STOCK',
+          `Line ${e.first} takes ${e.qty} ${unit} from batch ${b.batchKey.batchNo ?? '(no batch no.)'}, which holds only ${round(b.batchStock)} ${unit}. Issue at most the batch stock and take the rest from another batch.`);
       }
     }
 

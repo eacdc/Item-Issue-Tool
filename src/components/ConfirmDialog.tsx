@@ -15,7 +15,8 @@ interface Props {
 /** Last look before saving. Warnings from the server appear here and must be ticked. */
 export function ConfirmDialog({ state, busy, writesEnabled, onAcknowledge, onConfirm, onCancel, children }: Props) {
   const hasWarnings = state.warnings.length > 0;
-  const blocked = busy || (hasWarnings && !state.acknowledged);
+  // A line over its batch's current stock can never be saved: back to the form.
+  const blocked = busy || !!state.staleNotice || (hasWarnings && !state.acknowledged);
   return (
     <Modal
       title={hasWarnings ? 'Check the warnings' : 'Confirm issue'}
@@ -33,14 +34,14 @@ export function ConfirmDialog({ state, busy, writesEnabled, onAcknowledge, onCon
       }
     >
       {!writesEnabled && <p className="notice notice-dry">Dry run: the server will test this issue and roll it back. Nothing is saved.</p>}
-      {state.staleNotice && <p className="notice notice-warn">{state.staleNotice}</p>}
+      {state.staleNotice && <p className="notice notice-error">{state.staleNotice}</p>}
       {children}
       {hasWarnings && (
         <div className="warnings">
           <h3>Warnings</h3>
           <ul>
             {state.warnings.map((w, i) => (
-              <li key={i} className={w.code === 'OVER_BATCH_STOCK' ? 'warning-strong' : undefined}>
+              <li key={i}>
                 <span className="warning-code">{w.code.replace(/_/g, ' ').toLowerCase()}</span> {w.message}
               </li>
             ))}

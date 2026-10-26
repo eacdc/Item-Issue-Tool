@@ -63,6 +63,11 @@ export function takenFromBatch(lines: DraftLine[], itemId: number, key: BatchKey
   return round3(lines.filter((l) => l.item.itemId === itemId && sameBatch(l.batch.batchKey, key)).reduce((s, l) => s + l.quantity, 0));
 }
 
+/** What a batch can still give after `taken`, never below zero: a batch never gives more than it holds. */
+export function batchLeft(batch: Pick<Batch, 'batchStock'>, taken: number): number {
+  return Math.max(0, round3(batch.batchStock - taken));
+}
+
 let counter = 0;
 
 /**

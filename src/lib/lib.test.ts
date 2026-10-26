@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatQty, parseQuantity, qtyWithUnit, sanitizeQuantityInput } from './quantity';
-import { addLine, linesOverBatch, remaining, removeLine, toRequestLines, totalFor, totalsByUnit, type DraftLine } from './lines';
+import { addLine, batchLeft, linesOverBatch, remaining, removeLine, toRequestLines, totalFor, totalsByUnit, type DraftLine } from './lines';
 import { newRequestId } from './uuid';
 import type { Batch } from '../api/types';
 
@@ -69,6 +69,13 @@ describe('lines', () => {
     expect(linesOverBatch(lines, new Map([[9681, [batch(52873, 200)]]]))).toHaveLength(0);
     expect(linesOverBatch(lines, new Map([[9681, [batch(52873, 100)]]]))).toHaveLength(1);
     expect(linesOverBatch(lines, new Map([[9681, []]]))).toHaveLength(1);   // batch emptied
+  });
+
+  it('caps what a batch can still give at its stock', () => {
+    expect(batchLeft(batch(1, 930), 0)).toBe(930);
+    expect(batchLeft(batch(1, 930), 400.5)).toBe(529.5);
+    expect(batchLeft(batch(1, 930), 930)).toBe(0);
+    expect(batchLeft(batch(1, 930), 1066)).toBe(0);
   });
 });
 

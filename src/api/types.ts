@@ -212,7 +212,7 @@ export interface Department {
   departmentName: string | null;
 }
 
-export type WarningCode = 'OVER_PICKLIST_PENDING' | 'OVER_JOB_PENDING' | 'OVER_BATCH_STOCK';
+export type WarningCode = 'OVER_PICKLIST_PENDING' | 'OVER_JOB_PENDING';
 
 export interface IssueWarning {
   code: WarningCode | string;

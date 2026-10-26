@@ -3,7 +3,7 @@ import type { Batch, Item, ItemBatches } from '../api';
 import { BatchTable } from './BatchTable';
 import { IssueLinesTable, type LinesContext } from './IssueLinesTable';
 import { QtyInput } from './QtyInput';
-import { addLine, remaining, removeLine, takenFromBatch, totalsByUnit, type DraftLine, type LineProcess } from '../lib/lines';
+import { addLine, batchLeft, remaining, removeLine, takenFromBatch, totalsByUnit, type DraftLine, type LineProcess } from '../lib/lines';
 import { formatQty, parseQuantity, qtyWithUnit } from '../lib/quantity';
 
 interface Props {
@@ -46,11 +46,17 @@ export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel,
     setError(null);
   }, [item.itemId]);
 
+  /** What the batch can still give, after the lines already taken from it in this issue. */
+  const batchAvailable = (batch: Batch) => batchLeft(batch, takenFromBatch(lines, item.itemId, batch.batchKey));
+
+  // The prefill is what is left to issue, but never more than the batch can
+  // give: the rest is issued from another batch.
   function choose(batch: Batch) {
     setSelected(batch);
-    const left = remaining(pending, addedTowardPending);
+    const available = batchAvailable(batch);
+    const left = Math.min(remaining(pending, addedTowardPending), available);
     setQtyText(left > 0 ? String(left) : '');
-    setError(null);
+    setError(available > 0 ? null : `This issue already takes all ${qtyWithUnit(batch.batchStock, unit)} of this batch. Choose another batch.`);
     requestAnimationFrame(() => qtyRef.current?.focus());
   }
 
@@ -62,6 +68,14 @@ export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel,
     const quantity = parseQuantity(qtyText);
     if (quantity === null) {
       setError(`Enter a quantity greater than zero, in ${unit ?? 'the stock unit'}, with at most 3 decimals.`);
+      qtyRef.current?.focus();
+      return;
+    }
+    const available = batchAvailable(selected);
+    if (quantity > available) {
+      const taken = takenFromBatch(lines, item.itemId, selected.batchKey);
+      setError(`This batch holds only ${qtyWithUnit(selected.batchStock, unit)}${taken > 0 ? ` and this issue already takes ${qtyWithUnit(taken, unit)} of it` : ''}. `
+        + (available > 0 ? `Enter at most ${qtyWithUnit(available, unit)} and take the rest from another batch.` : 'Choose another batch.'));
       qtyRef.current?.focus();
       return;
     }
@@ -112,7 +126,10 @@ export function LinesEditor({ item, batches, lines, onLinesChange, pendingLabel,
           {selected ? (
             <>
               <span className="label">Batch</span> <span className="mono">{selected.batchKey.batchNo ?? '(no batch no.)'}</span>{' '}
-              <span className="muted">holds {qtyWithUnit(selected.batchStock, unit)}</span>
+              <span className="muted">
+                holds {qtyWithUnit(selected.batchStock, unit)}
+                {batchAvailable(selected) < selected.batchStock && <> · {qtyWithUnit(batchAvailable(selected), unit)} left after this issue's lines</>}
+              </span>
             </>
           ) : (
             <span className="muted">Click a batch above to issue from it.</span>
